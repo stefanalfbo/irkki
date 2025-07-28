@@ -2,13 +2,65 @@
 
 namespace Irkki;
 
+enum AppScreen
+{
+    Start,
+    Main,
+    Exit
+}
+
 class Program
 {
     static List<string> messages = new();
     static List<string> users = new();
 
     static void Main(string[] args)
-    {        
+    {
+        var currentScreen = AppScreen.Start;
+
+        while (currentScreen != AppScreen.Exit)
+        {
+            switch (currentScreen)
+            {
+                case AppScreen.Start:
+                    ShowStartScreen();
+                    currentScreen = AppScreen.Main;
+                    break;
+                case AppScreen.Main:
+                    ShowMainScreen();
+                    currentScreen = AppScreen.Exit;
+                    break;
+                case AppScreen.Exit:
+                    break;
+            }
+        }
+
+        AnsiConsole.Clear();
+    }
+
+    static AppScreen ShowStartScreen()
+    {
+        AnsiConsole.Clear();
+
+        AnsiConsole.Write(
+            new FigletText("i r k k i")
+                .Centered()
+                .Color(Color.Green));
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Choose an option:")
+                .AddChoices("Start", "Exit"));
+
+        return choice switch
+        {
+            "Start" => AppScreen.Main,
+            _ => AppScreen.Exit
+        };
+    }
+
+    static AppScreen ShowMainScreen()
+    {
         var totalHeight = Console.WindowHeight;
         int layoutHeight = totalHeight - 2;
 
@@ -27,7 +79,7 @@ class Program
             string command = Console.ReadLine() ?? "";
 
             if (command == "/quit")
-                break;
+                return AppScreen.Exit;
 
             messages.Add(command);
         }
@@ -70,7 +122,7 @@ class Program
             .Header("Users");
 
     }
-    
+
     static Panel CreateInputPanel()
     {
         return new Panel(new Markup("[bold green]> [/]"))
