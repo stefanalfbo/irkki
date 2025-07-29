@@ -5,14 +5,18 @@ namespace Irkki;
 enum AppScreen
 {
     Start,
+    Connect,
     Main,
     Exit
 }
 
 class Program
 {
-    static List<string> messages = new();
-    static List<string> users = new();
+    static List<string> _messages = new();
+    static List<string> _users = new();
+    static string _nickname = "guest";
+    static string _server = "localhost";
+    static int _port = 6667;
 
     static void Main(string[] args)
     {
@@ -23,12 +27,13 @@ class Program
             switch (currentScreen)
             {
                 case AppScreen.Start:
-                    ShowStartScreen();
-                    currentScreen = AppScreen.Main;
+                    currentScreen = ShowStartScreen();
+                    break;
+                case AppScreen.Connect:
+                    currentScreen = ShowConnectScreen();
                     break;
                 case AppScreen.Main:
-                    ShowMainScreen();
-                    currentScreen = AppScreen.Exit;
+                    currentScreen = ShowMainScreen();
                     break;
                 case AppScreen.Exit:
                     break;
@@ -54,9 +59,34 @@ class Program
 
         return choice switch
         {
-            "Start" => AppScreen.Main,
+            "Start" => AppScreen.Connect,
             _ => AppScreen.Exit
         };
+    }
+
+    static AppScreen ShowConnectScreen()
+    {
+        AnsiConsole.Clear();
+
+        AnsiConsole.Write(
+            new FigletText("i r k k i")
+                .Centered()
+                .Color(Color.Green));
+
+        _nickname = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter your nickname:")
+                .DefaultValue(_nickname));
+             
+        _server = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter server address:")
+                .DefaultValue(_server));
+
+        _port = AnsiConsole.Prompt(
+            new TextPrompt<int>("Enter server port:")
+                .DefaultValue(_port));
+
+        return AppScreen.Main;
+
     }
 
     static AppScreen ShowMainScreen()
@@ -69,8 +99,8 @@ class Program
             AnsiConsole.Clear();
 
             var layout = CreateWindow();
-            layout["Left"].Update(CreateChatPanel(messages));
-            layout["Right"].Update(CreateUserListPanel(users));
+            layout["Left"].Update(CreateChatPanel(_messages));
+            layout["Right"].Update(CreateUserListPanel(_users));
             layout["Bottom"].Update(CreateInputPanel());
 
             AnsiConsole.Write(layout);
@@ -81,7 +111,7 @@ class Program
             if (command == "/quit")
                 return AppScreen.Exit;
 
-            messages.Add(command);
+            _messages.Add(command);
         }
     }
 
