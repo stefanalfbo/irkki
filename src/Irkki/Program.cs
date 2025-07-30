@@ -1,4 +1,5 @@
 ﻿using Spectre.Console;
+using Irkki.Irc;
 
 namespace Irkki;
 
@@ -12,13 +13,14 @@ enum AppScreen
 
 class Program
 {
+    static IrcClient? _irc;
     static List<string> _messages = new();
     static List<string> _users = new();
-    static string _nickname = "guest";
-    static string _server = "localhost";
+    static string _nickname = "anonguest4523";
+    static string _server = "irc.eu.libera.chat";
     static int _port = 6667;
 
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         var currentScreen = AppScreen.Start;
 
@@ -31,6 +33,12 @@ class Program
                     break;
                 case AppScreen.Connect:
                     currentScreen = ShowConnectScreen();
+                    _irc = await IrcClient.Connect(_nickname, _server, _port);
+                    _ = Task.Run(() => _irc.Listen(async message =>
+                    {
+                        _messages.Add(message);
+                        await Task.CompletedTask;
+                    }));
                     break;
                 case AppScreen.Main:
                     currentScreen = ShowMainScreen();
@@ -54,8 +62,9 @@ class Program
 
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("Choose an option:")
-                .AddChoices("Start", "Exit"));
+                .Title("[green]Choose an option:[/]")
+                .AddChoices("Start", "Exit")
+                .HighlightStyle(Color.Green));
 
         return choice switch
         {
@@ -74,15 +83,15 @@ class Program
                 .Color(Color.Green));
 
         _nickname = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter your nickname:")
+            new TextPrompt<string>("[green]Enter your nickname:[/]")
                 .DefaultValue(_nickname));
-             
+
         _server = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter server address:")
+            new TextPrompt<string>("[green]Enter server address:[/]")
                 .DefaultValue(_server));
 
         _port = AnsiConsole.Prompt(
-            new TextPrompt<int>("Enter server port:")
+            new TextPrompt<int>("[green]Enter server port:[/]")
                 .DefaultValue(_port));
 
         return AppScreen.Main;
@@ -93,25 +102,57 @@ class Program
     {
         var totalHeight = Console.WindowHeight;
         int layoutHeight = totalHeight - 2;
+        string currentInput = "";
+        DateTime lastUpdate = DateTime.MinValue;
 
         while (true)
         {
-            AnsiConsole.Clear();
+            if (_messages.Count > 0 && DateTime.Now - lastUpdate > TimeSpan.FromMilliseconds(100))
+            {
+                AnsiConsole.Clear();
 
-            var layout = CreateWindow();
-            layout["Left"].Update(CreateChatPanel(_messages));
-            layout["Right"].Update(CreateUserListPanel(_users));
-            layout["Bottom"].Update(CreateInputPanel());
+                var layout = CreateWindow();
+                layout["Left"].Update(CreateChatPanel(_messages));
+                layout["Right"].Update(CreateUserListPanel(_users));
+                layout["Bottom"].Update(CreateInputPanel(currentInput));
 
-            AnsiConsole.Write(layout);
+                AnsiConsole.Write(layout);
 
-            Console.SetCursorPosition(4, layoutHeight);
-            string command = Console.ReadLine() ?? "";
+                Console.SetCursorPosition(4 + currentInput.Length, layoutHeight);
+                lastUpdate = DateTime.Now;
+            }
 
-            if (command == "/quit")
-                return AppScreen.Exit;
+            if (Console.KeyAvailable)
+            {
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
 
-            _messages.Add(command);
+                if (keyInfo.Key == ConsoleKey.Enter)
+                {
+                    if (currentInput == "/quit")
+                    {
+                        _irc?.Quit();
+                        return AppScreen.Exit;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(currentInput))
+                    {
+                        // _irc?.SendMessage(currentInput);
+                        // _messages.Add($"<{_nickname}> {currentInput}");
+                    }
+
+                    currentInput = "";
+                }
+                else if (keyInfo.Key == ConsoleKey.Backspace && currentInput.Length > 0)
+                {
+                    currentInput = currentInput[..^1];
+                }
+                else if (IsPrintableChar(keyInfo.KeyChar))
+                {
+                    currentInput += keyInfo.KeyChar;
+                }
+            }
+
+            Thread.Sleep(50);
         }
     }
 
@@ -134,7 +175,7 @@ class Program
     {
         var text = string.Join("\n", messages);
 
-        return new Panel(text)
+        return new Panel(Markup.Escape(text))
             .Expand()
             .Border(BoxBorder.Rounded)
             .BorderStyle(Color.Green)
@@ -150,15 +191,21 @@ class Program
             .Border(BoxBorder.Rounded)
             .BorderStyle(Color.Green)
             .Header("Users");
-
     }
 
-    static Panel CreateInputPanel()
+    static Panel CreateInputPanel(string currentInput = "")
     {
-        return new Panel(new Markup("[bold green]> [/]"))
+        var inputText = $"[green]> [/]{currentInput}";
+
+        return new Panel(new Markup(inputText))
             .Expand()
             .Border(BoxBorder.Rounded)
             .BorderStyle(Color.Green)
             .Header("Input");
+    }
+    
+    static bool IsPrintableChar(char c)
+    {
+        return c >= 32 && c <= 126;
     }
 }
