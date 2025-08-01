@@ -4,6 +4,7 @@ public enum TokenType
 {
     Illegal,
     EOF,
+    CrLf,
     Prefix,
 }
 
@@ -47,6 +48,11 @@ public class Lexer
         return _input[start.._currentPosition];
     }
 
+    private char PeekChar()
+    {
+        return _readPosition >= _input.Length ? '\0' : _input[_readPosition];
+    }
+
     public Token NextToken()
     {
         Token token;
@@ -56,6 +62,17 @@ public class Lexer
             case ':':
                 var value = ReadString();
                 token = new Token(TokenType.Prefix, value);
+                break;
+            case '\r':
+                if (PeekChar() == '\n')
+                {
+                    ReadChar();
+                    token = new Token(TokenType.CrLf, "\r\n");
+                }
+                else
+                {
+                    token = new Token(TokenType.Illegal, _currentChar.ToString());
+                }
                 break;
             case '\0':
                 return new Token(TokenType.EOF, string.Empty);
