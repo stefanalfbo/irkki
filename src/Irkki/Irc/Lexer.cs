@@ -4,7 +4,7 @@ public enum TokenType
 {
     Illegal,
     EOF,
-    Colon,
+    Prefix,
 }
 
 public record Token(TokenType Type, string Value);
@@ -34,6 +34,18 @@ public class Lexer
         _currentPosition = _readPosition;
         _readPosition++;
     }
+    
+    private string ReadString()
+    {
+        var start = _currentPosition + 1;
+
+        while (_currentChar != '\0' && _currentChar != ' ')
+        {
+            ReadChar();
+        }
+
+        return _input[start.._currentPosition];
+    }
 
     public Token NextToken()
     {
@@ -42,7 +54,8 @@ public class Lexer
         switch (_currentChar)
         {
             case ':':
-                token = new Token(TokenType.Colon, _currentChar.ToString());
+                var value = ReadString();
+                token = new Token(TokenType.Prefix, value);
                 break;
             case '\0':
                 return new Token(TokenType.EOF, string.Empty);
@@ -50,7 +63,7 @@ public class Lexer
             default:
                 return new Token(TokenType.Illegal, _currentChar.ToString());
         }
-        
+
         ReadChar();
 
         return token;

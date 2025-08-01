@@ -12,10 +12,10 @@ public class IrcFixture
         var lexer = new Lexer(message);
 
         // Act
-        var token = lexer.NextToken();
+        var prefix = lexer.NextToken();
 
         // Assert
-        Assert.Equal(TokenType.Colon, token.Type);
-        Assert.Equal(":", token.Value);
+        Assert.Equal(TokenType.Prefix, prefix.Type);
+        Assert.Equal("copper.libera.chat", prefix.Value);
     }
 }
