@@ -2,7 +2,7 @@ using Irkki.Irc;
 
 namespace Irkki.Tests.Irc;
 
-public class IrcFixture
+public class LexerFixture
 {
     [Fact]
     public void TestLexer()
