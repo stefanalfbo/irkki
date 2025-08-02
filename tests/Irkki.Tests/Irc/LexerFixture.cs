@@ -155,4 +155,19 @@ public class LexerFixture
         Assert.Equal(TokenType.EOF, tokens[13].Type);
         Assert.Equal("", tokens[13].Value);
     }
+
+    [Fact]
+    public void TestEmptyMessage()
+    {
+        // Arrange
+        var message = "";
+        var lexer = new Lexer(message);
+
+        // Act
+        var token = lexer.NextToken();
+
+        // Assert
+        Assert.Equal(TokenType.EOF, token.Type);
+        Assert.Equal("", token.Value);
+    }
 }
