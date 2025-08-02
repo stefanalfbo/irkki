@@ -3,9 +3,8 @@ namespace Irkki.Irc;
 public enum TokenType
 {
     Illegal,
-    EOF,
     CrLf,
-    Prefix,
+    Colon,
 }
 
 public record Token(TokenType Type, string Value);
@@ -60,8 +59,7 @@ public class Lexer
         switch (_currentChar)
         {
             case ':':
-                var value = ReadString();
-                token = new Token(TokenType.Prefix, value);
+                token = new Token(TokenType.Colon, _currentChar.ToString());
                 break;
             case '\r':
                 if (PeekChar() == '\n')
@@ -75,7 +73,7 @@ public class Lexer
                 }
                 break;
             case '\0':
-                return new Token(TokenType.EOF, string.Empty);
+                return new Token(TokenType.Illegal, string.Empty);
 
             default:
                 return new Token(TokenType.Illegal, _currentChar.ToString());

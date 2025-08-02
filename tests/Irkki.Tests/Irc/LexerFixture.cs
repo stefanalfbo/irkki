@@ -5,22 +5,47 @@ namespace Irkki.Tests.Irc;
 public class LexerFixture
 {
     [Fact]
-    public void TestLexer()
+    public void TestIllegalToken()
     {
         // Arrange
-        // var message = ":copper.libera.chat NOTICE * :*** Checking Ident\r\n";
-        var message = ":copper.libera.chat \r\n";
+        var message = "\0";
         var lexer = new Lexer(message);
 
         // Act
-        var prefix = lexer.NextToken();
-        var crlf = lexer.NextToken();
+        var token = lexer.NextToken();
 
         // Assert
-        Assert.Equal(TokenType.Prefix, prefix.Type);
-        Assert.Equal("copper.libera.chat", prefix.Value);
+        Assert.Equal(TokenType.Illegal, token.Type);
+        Assert.Equal("", token.Value);
+    }
 
-        Assert.Equal(TokenType.CrLf, crlf.Type);
-        Assert.Equal("\r\n", crlf.Value);
+    [Fact]
+    public void TestCrLfToken()
+    {
+        // Arrange
+        var message = "\r\n";
+        var lexer = new Lexer(message);
+
+        // Act
+        var token = lexer.NextToken();
+
+        // Assert
+        Assert.Equal(TokenType.CrLf, token.Type);
+        Assert.Equal("\r\n", token.Value);
+    }
+
+    [Fact]
+    public void TestColonToken()
+    {
+        // Arrange
+        var message = ":copper.libera.chat NOTICE * :*** Checking Ident\r\n";
+        var lexer = new Lexer(message);
+
+        // Act
+        var token = lexer.NextToken();
+        
+        // Assert
+        Assert.Equal(TokenType.Colon, token.Type);
+        Assert.Equal(":", token.Value);
     }
 }
