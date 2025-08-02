@@ -1,5 +1,7 @@
 namespace Irkki.Irc;
 
+public class ParseException(string message) : Exception(message) { }
+
 public class Parser
 {
     private readonly Lexer _lexer;
@@ -11,12 +13,42 @@ public class Parser
 
     public Message ParseMessage()
     {
-        string? prefix = null;
-        if (_lexer.NextToken().Type == TokenType.Colon)
+        var token = _lexer.NextToken();
+
+        // Prefix handling
+        string? prefix = PrefixHandler(token);
+        if (prefix != null)
         {
-            prefix = _lexer.NextToken().Value;
+            token = _lexer.NextToken();
         }
 
-        return new Message(prefix, "not implemented yet", Array.Empty<string>());
+        var command = CommandHandler(token);
+
+        return new Message(prefix, command, Array.Empty<string>());
+    }
+
+    private string? PrefixHandler(Token token)
+    {
+        string? prefix = null;
+        if (token.Type == TokenType.Colon)
+        {
+            prefix = _lexer.NextToken().Value;
+            if (_lexer.NextToken().Type != TokenType.Space)
+            {
+                throw new ParseException("Expected space after prefix.");
+            }
+        }
+
+        return prefix;
+    }
+
+    private string CommandHandler(Token token)
+    {
+        if (token.Type != TokenType.Word)
+        {
+            throw new ParseException("Expected command token.");
+        }
+
+        return token.Value; 
     }
 }
