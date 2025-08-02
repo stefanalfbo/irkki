@@ -98,7 +98,7 @@ public class LexerFixture
     public void TestMessage()
     {
         // Arrange
-        var message = ":copper.libera.chat NOTICE\r\n";
+        var message = ":copper.libera.chat NOTICE * :*** Checking Ident\r\n";
         var lexer = new Lexer(message);
 
         // Act
@@ -111,7 +111,7 @@ public class LexerFixture
         } while (token.Type != TokenType.EOF);
 
         // Assert
-        Assert.Equal(6, tokens.Count);
+        Assert.Equal(14, tokens.Count);
 
         Assert.Equal(TokenType.Colon, tokens[0].Type);
         Assert.Equal(":", tokens[0].Value);
@@ -125,10 +125,34 @@ public class LexerFixture
         Assert.Equal(TokenType.Word, tokens[3].Type);
         Assert.Equal("NOTICE", tokens[3].Value);
 
-        Assert.Equal(TokenType.CrLf, tokens[4].Type);
-        Assert.Equal("\r\n", tokens[4].Value);
+        Assert.Equal(TokenType.Space, tokens[4].Type);
+        Assert.Equal(" ", tokens[4].Value);
 
-        Assert.Equal(TokenType.EOF, tokens[5].Type);
-        Assert.Equal("", tokens[5].Value);
+        Assert.Equal(TokenType.Word, tokens[5].Type);
+        Assert.Equal("*", tokens[5].Value);
+
+        Assert.Equal(TokenType.Space, tokens[6].Type);
+        Assert.Equal(" ", tokens[6].Value);
+
+        Assert.Equal(TokenType.Word, tokens[7].Type);
+        Assert.Equal(":***", tokens[7].Value);
+
+        Assert.Equal(TokenType.Space, tokens[8].Type);
+        Assert.Equal(" ", tokens[8].Value);
+
+        Assert.Equal(TokenType.Word, tokens[9].Type);
+        Assert.Equal("Checking", tokens[9].Value);
+
+        Assert.Equal(TokenType.Space, tokens[10].Type);
+        Assert.Equal(" ", tokens[10].Value);
+
+        Assert.Equal(TokenType.Word, tokens[11].Type);
+        Assert.Equal("Ident", tokens[11].Value);
+
+        Assert.Equal(TokenType.CrLf, tokens[12].Type);
+        Assert.Equal("\r\n", tokens[12].Value);
+
+        Assert.Equal(TokenType.EOF, tokens[13].Type);
+        Assert.Equal("", tokens[13].Value);
     }
 }

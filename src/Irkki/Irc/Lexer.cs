@@ -64,7 +64,15 @@ public class Lexer
         switch (_currentChar)
         {
             case ':':
-                token = new Token(TokenType.Colon, _currentChar.ToString());
+                if (_currentPosition == 0 && _readPosition == 1)
+                {
+                    // Special case for leading colon in prefix
+                    token = new Token(TokenType.Colon, ":");
+                }
+                else
+                {
+                    token = new Token(TokenType.Word, ReadString());
+                }
                 break;
             case ' ':
                 token = new Token(TokenType.Space, _currentChar.ToString());
@@ -84,8 +92,7 @@ public class Lexer
                 token = new Token(TokenType.EOF, string.Empty);
                 break;
             default:
-                var word = ReadString();
-                token = new Token(TokenType.Word, word);
+                token = new Token(TokenType.Word, ReadString());
                 break;
         }
 
