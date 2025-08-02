@@ -8,7 +8,7 @@ public class LexerFixture
     public void TestIllegalToken()
     {
         // Arrange
-        var message = "\0";
+        var message = "\r";
         var lexer = new Lexer(message);
 
         // Act
@@ -16,6 +16,21 @@ public class LexerFixture
 
         // Assert
         Assert.Equal(TokenType.Illegal, token.Type);
+        Assert.Equal("\r", token.Value);
+    }
+
+    [Fact]
+    public void TestEOFToken()
+    {
+        // Arrange
+        var message = "\0";
+        var lexer = new Lexer(message);
+
+        // Act
+        var token = lexer.NextToken();
+
+        // Assert
+        Assert.Equal(TokenType.EOF, token.Type);
         Assert.Equal("", token.Value);
     }
 
@@ -65,10 +80,25 @@ public class LexerFixture
     }
 
     [Fact]
+    public void TestWordToken()
+    {
+        // Arrange
+        var message = "Hello";
+        var lexer = new Lexer(message);
+
+        // Act
+        var token = lexer.NextToken();
+
+        // Assert
+        Assert.Equal(TokenType.Word, token.Type);
+        Assert.Equal("Hello", token.Value);
+    }
+
+    [Fact]
     public void TestMessage()
     {
         // Arrange
-        var message = ": \r\n";
+        var message = ":copper.libera.chat NOTICE\r\n";
         var lexer = new Lexer(message);
 
         // Act
@@ -78,18 +108,27 @@ public class LexerFixture
         {
             token = lexer.NextToken();
             tokens.Add(token);
-        } while (token.Type != TokenType.CrLf);
+        } while (token.Type != TokenType.EOF);
 
         // Assert
-        Assert.Equal(3, tokens.Count);
+        Assert.Equal(6, tokens.Count);
 
         Assert.Equal(TokenType.Colon, tokens[0].Type);
         Assert.Equal(":", tokens[0].Value);
 
-        Assert.Equal(TokenType.Space, tokens[1].Type);
-        Assert.Equal(" ", tokens[1].Value);
+        Assert.Equal(TokenType.Word, tokens[1].Type);
+        Assert.Equal("copper.libera.chat", tokens[1].Value);
 
-        Assert.Equal(TokenType.CrLf, tokens[2].Type);
-        Assert.Equal("\r\n", tokens[2].Value);
+        Assert.Equal(TokenType.Space, tokens[2].Type);
+        Assert.Equal(" ", tokens[2].Value);
+
+        Assert.Equal(TokenType.Word, tokens[3].Type);
+        Assert.Equal("NOTICE", tokens[3].Value);
+
+        Assert.Equal(TokenType.CrLf, tokens[4].Type);
+        Assert.Equal("\r\n", tokens[4].Value);
+
+        Assert.Equal(TokenType.EOF, tokens[5].Type);
+        Assert.Equal("", tokens[5].Value);
     }
 }

@@ -3,9 +3,11 @@ namespace Irkki.Irc;
 public enum TokenType
 {
     Illegal,
+    EOF,
     CrLf,
     Colon,
-    Space
+    Space,
+    Word
 }
 
 public record Token(TokenType Type, string Value);
@@ -38,14 +40,16 @@ public class Lexer
     
     private string ReadString()
     {
-        var start = _currentPosition + 1;
+        var start = _currentPosition;
+        var nextChar = PeekChar();
 
-        while (_currentChar != '\0' && _currentChar != ' ')
+        while (nextChar != '\r' && nextChar != ' ' && nextChar != '\0')
         {
             ReadChar();
+            nextChar = PeekChar();
         }
 
-        return _input[start.._currentPosition];
+        return _input[start..(_currentPosition+1)];
     }
 
     private char PeekChar()
@@ -77,10 +81,12 @@ public class Lexer
                 }
                 break;
             case '\0':
-                return new Token(TokenType.Illegal, string.Empty);
-
+                token = new Token(TokenType.EOF, string.Empty);
+                break;
             default:
-                return new Token(TokenType.Illegal, _currentChar.ToString());
+                var word = ReadString();
+                token = new Token(TokenType.Word, word);
+                break;
         }
 
         ReadChar();
