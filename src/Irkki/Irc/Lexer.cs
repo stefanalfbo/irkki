@@ -5,6 +5,7 @@ public enum TokenType
     Illegal,
     CrLf,
     Colon,
+    Space
 }
 
 public record Token(TokenType Type, string Value);
@@ -60,6 +61,9 @@ public class Lexer
         {
             case ':':
                 token = new Token(TokenType.Colon, _currentChar.ToString());
+                break;
+            case ' ':
+                token = new Token(TokenType.Space, _currentChar.ToString());
                 break;
             case '\r':
                 if (PeekChar() == '\n')
