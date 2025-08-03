@@ -49,6 +49,23 @@ public class Parser
             throw new ParseException("Expected command token.");
         }
 
-        return token.Value; 
+        if (!IsOnlyBasedOnLetters(token.Value))
+        {
+            throw new ParseException("Command must consist of letters only.");
+        }
+
+        return token.Value;
+    }
+    
+    private bool IsOnlyBasedOnLetters(string value)
+    {
+        foreach (var c in value)
+        {
+            if (!char.IsAsciiLetter(c))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

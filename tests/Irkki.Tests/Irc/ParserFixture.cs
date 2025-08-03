@@ -48,4 +48,16 @@ public class ParserFixture
         // Assert
         Assert.Equal("NOTICE", parsedMessage.Command);
     }
+
+    [Fact]
+    public void TestInvalidCommandThrowsException()
+    {
+        // Arrange
+        var message = ":copper.libera.chat N0T1C3 * :*** Checking Ident\r\n";
+        var lexer = new Lexer(message);
+        var parser = new Parser(lexer);
+
+        // Act & Assert
+        Assert.Throws<ParseException>(() => parser.ParseMessage());
+    }
 }
