@@ -6,9 +6,9 @@ public class Parser
 {
     private readonly Lexer _lexer;
 
-    public Parser(Lexer lexer)
+    public Parser(string message)
     {
-        _lexer = lexer;
+        _lexer = new Lexer(message);
     }
 
     public Message ParseMessage()

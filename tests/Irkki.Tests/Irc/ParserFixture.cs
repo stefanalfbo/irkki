@@ -9,8 +9,7 @@ public class ParserFixture
     {
         // Arrange
         var message = ":copper.libera.chat NOTICE * :*** Checking Ident\r\n";
-        var lexer = new Lexer(message);
-        var parser = new Parser(lexer);
+        var parser = new Parser(message);
 
         // Act
         var parsedMessage = parser.ParseMessage();
@@ -24,8 +23,7 @@ public class ParserFixture
     {
         // Arrange
         var message = "NOTICE * :*** Checking Ident\r\n";
-        var lexer = new Lexer(message);
-        var parser = new Parser(lexer);
+        var parser = new Parser(message);
 
         // Act
         var parsedMessage = parser.ParseMessage();
@@ -39,8 +37,7 @@ public class ParserFixture
     {
         // Arrange
         var message = ":copper.libera.chat NOTICE * :*** Checking Ident\r\n";
-        var lexer = new Lexer(message);
-        var parser = new Parser(lexer);
+        var parser = new Parser(message);
 
         // Act
         var parsedMessage = parser.ParseMessage();
@@ -54,8 +51,7 @@ public class ParserFixture
     {
         // Arrange
         var message = ":copper.libera.chat N0T1C3 * :*** Checking Ident\r\n";
-        var lexer = new Lexer(message);
-        var parser = new Parser(lexer);
+        var parser = new Parser(message);
 
         // Act & Assert
         Assert.Throws<ParseException>(() => parser.ParseMessage());
@@ -66,8 +62,7 @@ public class ParserFixture
     {
         // Arrange
         var message = ":copper.libera.chat 001 copper :Welcome to the IRC server\r\n";
-        var lexer = new Lexer(message);
-        var parser = new Parser(lexer);
+        var parser = new Parser(message);
 
         // Act
         var parsedMessage = parser.ParseMessage();
