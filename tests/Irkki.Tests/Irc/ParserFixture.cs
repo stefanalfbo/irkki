@@ -60,4 +60,19 @@ public class ParserFixture
         // Act & Assert
         Assert.Throws<ParseException>(() => parser.ParseMessage());
     }
+
+    [Fact]
+    public void TestNumericCommand()
+    {
+        // Arrange
+        var message = ":copper.libera.chat 001 copper :Welcome to the IRC server\r\n";
+        var lexer = new Lexer(message);
+        var parser = new Parser(lexer);
+
+        // Act
+        var parsedMessage = parser.ParseMessage();
+
+        // Assert
+        Assert.Equal("001", parsedMessage.Command);
+    }
 }

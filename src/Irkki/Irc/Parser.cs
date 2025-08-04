@@ -42,22 +42,22 @@ public class Parser
         return prefix;
     }
 
-    private string CommandHandler(Token token)
+    private static string CommandHandler(Token token)
     {
         if (token.Type != TokenType.Word)
         {
             throw new ParseException("Expected command token.");
         }
 
-        if (!IsOnlyBasedOnLetters(token.Value))
+        if (!IsOnlyBasedOnLetters(token.Value) && !IsThreeDigitNumber(token.Value))
         {
-            throw new ParseException("Command must consist of letters only.");
+            throw new ParseException("Command must consist of letters only or a number with three digits.");
         }
 
         return token.Value;
     }
-    
-    private bool IsOnlyBasedOnLetters(string value)
+
+    private static bool IsOnlyBasedOnLetters(string value)
     {
         foreach (var c in value)
         {
@@ -67,5 +67,10 @@ public class Parser
             }
         }
         return true;
+    }
+    
+    private static bool IsThreeDigitNumber(string value)
+    {
+        return value.Length == 3 && int.TryParse(value, out var _);
     }
 }
