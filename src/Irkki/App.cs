@@ -6,7 +6,7 @@ namespace Irkki;
 public class App
 {
     static IrcClient? _irc;
-    static List<string> _messages = new();
+    static List<Message> _messages = new();
     static List<string> _users = new();
     static string _nickname = "anonguest4523";
     static string _server = "irc.eu.libera.chat";
@@ -28,7 +28,9 @@ public class App
                     _irc = await IrcClient.Connect(_nickname, _server, _port);
                     _ = Task.Run(() => _irc.Listen(async message =>
                     {
-                        _messages.Add(message);
+                        var parser = new Parser(message);
+                        var parsedMessage = parser.ParseMessage();
+                        _messages.Add(parsedMessage);
                         await Task.CompletedTask;
                     }));
                     break;
@@ -165,9 +167,9 @@ public class App
             );
     }
 
-    static Panel CreateChatPanel(List<string> messages)
+    static Panel CreateChatPanel(List<Message> messages)
     {
-        var text = string.Join("\n", messages);
+        var text = string.Join("\n", messages.Select(m => $"{m.Command}: {string.Join(" ", m.Parameters)}"));
 
         return new Panel(Markup.Escape(text))
             .Expand()
