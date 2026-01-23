@@ -1,0 +1,16 @@
+[package]
+publish = false
+name = "irkki-core"
+version = "0.1.0"
+description = "The irkki core library."
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+readme = "README.md"
+keywords = ["irc", "chat"]
+categories = ["command-line-utilities", "chat", "irc"]
+
+[dependencies]

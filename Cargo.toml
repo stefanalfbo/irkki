@@ -1,0 +1,11 @@
+[workspace]
+members = ["crates/irkki-core", "crates/irkki-cli"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.92"
+homepage = "https://github.com/stefanalfbo/irkki"
+repository = "https://github.com/stefanalfbo/irkki"
+authors = ["Stefan Alfbo <stefan.alfbo@gmail.com>"]
+license = "MIT"

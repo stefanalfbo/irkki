@@ -1,0 +1,16 @@
+[package]
+publish = false
+name = "irkki-cli"
+version = "0.1.0"
+description = "The irkki cli, which is a terminal user interface for IRC."
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+ratatui = "0.30.0"
+crossterm = "0.29.0"
+color-eyre = "0.6.5"
