@@ -13,15 +13,15 @@ pub struct Token {
     pub literal: String,
 }
 
-pub struct Lexer {
-    input: String,
+pub struct Lexer<'a> {
+    input: &'a str,
     current_char: Option<char>,
     current_position: usize,
     read_position: usize,
 }
 
-impl Lexer {
-    pub fn new(input: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
         let mut lexer = Lexer {
             input,
             current_char: None,
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_next_token() {
         let input = ":prefix COMMAND arg1 arg2\r\n";
-        let mut lexer = Lexer::new(input.to_string());
+        let mut lexer = Lexer::new(input);
 
         let expected_tokens = vec![
             (TokenType::Colon, ":"),
