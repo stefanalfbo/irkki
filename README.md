@@ -1,6 +1,7 @@
 # `irkki`
 
-[![Build and Test WebSec](https://github.com/stefanalfbo/irkki/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/stefanalfbo/irkki/actions/workflows/build_and_test.yml)
+[![CI](https://github.com/stefanalfbo/irkki/actions/workflows/ci.yml/badge.svg)](https://github.com/stefanalfbo/irkki/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
   <img src="https://github.com/stefanalfbo/irkki/blob/main/docs/assets/irkki-logo.png?raw=true" alt="irkki logo"/>
