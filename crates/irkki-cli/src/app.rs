@@ -6,11 +6,20 @@ use ratatui::{
 
 use crate::chat_view::{Model as ChatModel, view as chat_view};
 use crate::start_view::{Model as StartModel, StartSelection, view as start_view};
+use crate::wizard_view::{Model as WizardModel, view as wizard_view};
 
 pub enum CurrentScreen {
     Start,
+    Wizard,
     Chat,
     Exiting,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WizardStep {
+    Nickname,
+    Server,
+    Port,
 }
 /// App holds the state of the application
 pub struct App {
@@ -26,6 +35,7 @@ pub struct App {
     port: u16,
     current_screen: CurrentScreen,
     start_selection: StartSelection,
+    wizard_step: WizardStep,
 }
 
 const INPUT_CHARACTER_START: usize = 3;
@@ -42,6 +52,7 @@ impl App {
             port: 6667,
             current_screen: CurrentScreen::Start,
             start_selection: StartSelection::Start,
+            wizard_step: WizardStep::Nickname,
         }
     }
 
@@ -127,6 +138,10 @@ impl App {
 
                     let should_exit = match self.current_screen {
                         CurrentScreen::Start => self.handle_start_input(key.code),
+                        CurrentScreen::Wizard => {
+                            self.handle_wizard_input(key.code);
+                            false
+                        }
                         CurrentScreen::Chat => {
                             self.handle_chat_input(key.code);
                             false
@@ -149,6 +164,14 @@ impl App {
                     selection: self.start_selection,
                 };
                 start_view(&model, frame);
+            }
+            CurrentScreen::Wizard => {
+                let model = WizardModel {
+                    prompt: self.wizard_prompt(),
+                    input: self.input.clone(),
+                    character_index: self.character_index,
+                };
+                wizard_view(&model, frame);
             }
             CurrentScreen::Chat => {
                 let model = ChatModel {
@@ -174,12 +197,26 @@ impl App {
             }
             KeyCode::Enter => match self.start_selection {
                 StartSelection::Start => {
-                    self.current_screen = CurrentScreen::Chat;
+                    self.current_screen = CurrentScreen::Wizard;
+                    self.wizard_step = WizardStep::Nickname;
+                    self.input.clear();
+                    self.reset_cursor();
                     false
                 }
                 StartSelection::Exit => true,
             },
             _ => false,
+        }
+    }
+
+    fn handle_wizard_input(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Enter => self.advance_wizard(),
+            KeyCode::Char(to_insert) => self.enter_char(to_insert),
+            KeyCode::Backspace => self.delete_char(),
+            KeyCode::Left => self.move_cursor_left(),
+            KeyCode::Right => self.move_cursor_right(),
+            _ => {}
         }
     }
 
@@ -192,5 +229,44 @@ impl App {
             KeyCode::Right => self.move_cursor_right(),
             _ => {}
         }
+    }
+
+    fn wizard_prompt(&self) -> String {
+        match self.wizard_step {
+            WizardStep::Nickname => format!("Enter your nickname: ({}):", self.nickname),
+            WizardStep::Server => format!("Enter server address: ({}):", self.server),
+            WizardStep::Port => format!("Enter server port: ({}):", self.port),
+        }
+    }
+
+    fn advance_wizard(&mut self) {
+        let trimmed = self.input.trim();
+        match self.wizard_step {
+            WizardStep::Nickname => {
+                if !trimmed.is_empty() {
+                    self.nickname = trimmed.to_string();
+                }
+                self.wizard_step = WizardStep::Server;
+            }
+            WizardStep::Server => {
+                if !trimmed.is_empty() {
+                    self.server = trimmed.to_string();
+                }
+                self.wizard_step = WizardStep::Port;
+            }
+            WizardStep::Port => {
+                if !trimmed.is_empty() {
+                    if let Ok(port) = trimmed.parse::<u16>() {
+                        self.port = port;
+                    } else {
+                        return;
+                    }
+                }
+                self.current_screen = CurrentScreen::Chat;
+            }
+        }
+
+        self.input.clear();
+        self.reset_cursor();
     }
 }
