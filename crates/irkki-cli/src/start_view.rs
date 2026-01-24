@@ -68,7 +68,9 @@ pub fn view(model: &Model, frame: &mut Frame) {
         base_style
     };
 
-    let start_block = Block::bordered().style(base_style).border_style(start_style);
+    let start_block = Block::bordered()
+        .style(base_style)
+        .border_style(start_style);
     let start = Paragraph::new("Start")
         .style(start_style)
         .block(start_block)
