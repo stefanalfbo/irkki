@@ -3,10 +3,16 @@ use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
 };
+use std::{
+    io,
+    sync::mpsc::{self, Receiver},
+    time::Duration,
+};
 
 use crate::chat_view::{Model as ChatModel, view as chat_view};
 use crate::start_view::{Model as StartModel, StartSelection, view as start_view};
 use crate::wizard_view::{Model as WizardModel, view as wizard_view};
+use irkki_core::{IRCClient, Parser};
 
 pub enum CurrentScreen {
     Start,
@@ -36,6 +42,7 @@ pub struct App {
     current_screen: CurrentScreen,
     start_selection: StartSelection,
     wizard_step: WizardStep,
+    incoming: Option<Receiver<String>>,
 }
 
 const INPUT_CHARACTER_START: usize = 3;
@@ -53,6 +60,7 @@ impl App {
             current_screen: CurrentScreen::Start,
             start_selection: StartSelection::Start,
             wizard_step: WizardStep::Nickname,
+            incoming: None,
         }
     }
 
@@ -128,29 +136,32 @@ impl App {
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         loop {
+            self.drain_incoming();
             terminal.draw(|frame| self.draw(frame))?;
 
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    if matches!(key.code, KeyCode::Char('p')) {
-                        return Ok(());
-                    }
-
-                    let should_exit = match self.current_screen {
-                        CurrentScreen::Start => self.handle_start_input(key.code),
-                        CurrentScreen::Wizard => {
-                            self.handle_wizard_input(key.code);
-                            false
+            if event::poll(Duration::from_millis(50))? {
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press {
+                        if matches!(key.code, KeyCode::Char('p')) {
+                            return Ok(());
                         }
-                        CurrentScreen::Chat => {
-                            self.handle_chat_input(key.code);
-                            false
-                        }
-                        CurrentScreen::Exiting => true,
-                    };
 
-                    if should_exit {
-                        return Ok(());
+                        let should_exit = match self.current_screen {
+                            CurrentScreen::Start => self.handle_start_input(key.code),
+                            CurrentScreen::Wizard => {
+                                self.handle_wizard_input(key.code);
+                                false
+                            }
+                            CurrentScreen::Chat => {
+                                self.handle_chat_input(key.code);
+                                false
+                            }
+                            CurrentScreen::Exiting => true,
+                        };
+
+                        if should_exit {
+                            return Ok(());
+                        }
                     }
                 }
             }
@@ -262,11 +273,70 @@ impl App {
                         return;
                     }
                 }
+                self.start_irc_connection();
                 self.current_screen = CurrentScreen::Chat;
             }
         }
 
         self.input.clear();
         self.reset_cursor();
+    }
+
+    fn start_irc_connection(&mut self) {
+        let nickname = self.nickname.clone();
+        let server = self.server.clone();
+        let port = self.port;
+        let (sender, receiver) = mpsc::channel();
+        self.incoming = Some(receiver);
+
+        let connect_result = IRCClient::connect(nickname.clone(), server.clone(), port);
+        let mut client = match connect_result {
+            Ok(client) => client,
+            Err(error) => {
+                self.messages.push(format!(
+                    "Failed to connect to {server}:{port}: {error}"
+                ));
+                return;
+            }
+        };
+
+        std::thread::spawn(move || {
+            let _ = client.listen(|line| {
+                let parsed = parse_line(&line);
+                sender
+                    .send(parsed)
+                    .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e.to_string()))
+            });
+            let _ = sender.send("Disconnected from server.".to_string());
+        });
+    }
+
+    fn drain_incoming(&mut self) {
+        let receiver = match &self.incoming {
+            Some(receiver) => receiver,
+            None => return,
+        };
+
+        while let Ok(message) = receiver.try_recv() {
+            self.messages.push(message);
+        }
+    }
+}
+
+fn parse_line(line: &str) -> String {
+    let parsed = std::panic::catch_unwind(|| {
+        let mut parser = Parser::new(line);
+        parser.parse_message()
+    });
+
+    match parsed {
+        Ok(message) => {
+            if let Some(prefix) = message.prefix {
+                format!("{prefix} {}", message.command)
+            } else {
+                message.command
+            }
+        }
+        Err(_) => format!("(parse error) {line}"),
     }
 }
