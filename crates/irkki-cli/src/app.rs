@@ -18,7 +18,6 @@ pub enum CurrentScreen {
     Start,
     Wizard,
     Chat,
-    Exiting,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -152,12 +151,11 @@ impl App {
                                 self.handle_wizard_input(key.code);
                                 false
                             }
-                            CurrentScreen::Chat => {
-                                self.handle_chat_input(key.code);
-                                false
-                            }
-                            CurrentScreen::Exiting => true,
-                        };
+                        CurrentScreen::Chat => {
+                            self.handle_chat_input(key.code);
+                            false
+                        }
+                    };
 
                         if should_exit {
                             return Ok(());
@@ -193,7 +191,6 @@ impl App {
                 };
                 chat_view(&model, frame);
             }
-            CurrentScreen::Exiting => {}
         }
     }
 
