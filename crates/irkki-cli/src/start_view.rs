@@ -1,12 +1,11 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Paragraph},
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::Block,
 };
 
-use crate::widget::button_widget::ButtonWidget;
+use crate::widget::{button_widget::ButtonWidget, header::Header};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StartSelection {
@@ -37,15 +36,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
         ])
         .split(inner_area);
 
-    let header = Paragraph::new(vec![
-        Line::from(Span::styled(
-            "irkki",
-            base_style.add_modifier(Modifier::BOLD),
-        )),
-        Line::from(Span::raw("A IRC client")),
-    ])
-    .style(base_style)
-    .alignment(Alignment::Center);
+    let header = Header::new("irkki", "An IRC client");
     frame.render_widget(header, vertical[1]);
 
     let options_row = Layout::default()
