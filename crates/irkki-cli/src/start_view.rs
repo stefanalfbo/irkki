@@ -5,7 +5,7 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::widget::{button::Button, header::Header};
+use crate::widget::{Button, Header};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StartSelection {
