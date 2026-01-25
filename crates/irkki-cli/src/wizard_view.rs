@@ -1,10 +1,12 @@
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Position},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Paragraph},
 };
+
+use crate::widget::SimpleHeader;
 
 pub struct Model {
     pub prompt: String,
@@ -30,13 +32,8 @@ pub fn view(model: &Model, frame: &mut Frame) {
         ])
         .split(inner_area);
 
-    let title = Paragraph::new(Line::from(Span::styled(
-        "Setup",
-        base_style.add_modifier(Modifier::BOLD),
-    )))
-    .style(base_style)
-    .alignment(Alignment::Center);
-    frame.render_widget(title, vertical[1]);
+    let header = SimpleHeader::new("Setup");
+    frame.render_widget(header, vertical[1]);
 
     let prompt = Paragraph::new(vec![
         Line::from(Span::raw(&model.prompt)),

@@ -31,12 +31,37 @@ impl Widget for Header<'_> {
     }
 }
 
+pub struct SimpleHeader<'a> {
+    title: &'a str,
+}
+
+impl<'a> SimpleHeader<'a> {
+    pub fn new(title: &'a str) -> Self {
+        Self { title }
+    }
+}
+
+impl Widget for SimpleHeader<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let style = Style::default().fg(Color::LightGreen);
+
+        let header = Paragraph::new(Line::from(Span::styled(
+            self.title,
+            style.add_modifier(Modifier::BOLD),
+        )))
+        .style(style)
+        .alignment(Alignment::Center);
+
+        header.render(area, buf);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn render() {
+    fn render_header() {
         let widget = Header::new("Title", "Subtitle");
         let area = Rect::new(0, 0, 20, 5);
 
@@ -56,5 +81,22 @@ mod tests {
         let subtitle_style = buffer[(7, 1)].style();
         assert_eq!(subtitle_style.fg, Some(Color::LightGreen));
         assert!(!subtitle_style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_simple_header() {
+        let widget = SimpleHeader::new("Simple Title");
+        let area = Rect::new(0, 0, 20, 3);
+
+        let mut buffer = Buffer::empty(area);
+        widget.render(area, &mut buffer);
+
+        let header_line: String = (0..area.width).map(|x| buffer[(x, 0)].symbol()).collect();
+
+        assert_eq!(header_line, "    Simple Title    ");
+
+        let title_style = buffer[(6, 0)].style();
+        assert_eq!(title_style.fg, Some(Color::LightGreen));
+        assert!(title_style.add_modifier.contains(Modifier::BOLD));
     }
 }
