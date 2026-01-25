@@ -33,3 +33,40 @@ impl Widget for ButtonWidget<'_> {
         button.render(area, buf);
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn render_when_selected() {
+        let widget = ButtonWidget::new("Click Me", true);
+        let area = Rect::new(0, 0, 12, 3);
+
+        let mut buffer = Buffer::empty(area);
+        widget.render(area, &mut buffer);
+
+        let button_line: String = (0..area.width).map(|x| buffer[(x, 0)].symbol()).collect();
+        assert_eq!(button_line, "  Click Me  ");
+
+        let style = buffer[(4, 0)].style();
+        assert_eq!(style.fg, Some(Color::LightGreen));
+        assert!(style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_when_not_selected() {
+        let widget = ButtonWidget::new("Click Me", false);
+        let area = Rect::new(0, 0, 12, 3);
+
+        let mut buffer = Buffer::empty(area);
+        widget.render(area, &mut buffer);
+
+        let button_line: String = (0..area.width).map(|x| buffer[(x, 0)].symbol()).collect();
+        assert_eq!(button_line, "  Click Me  ");
+
+        let style = buffer[(4, 0)].style();
+        assert_eq!(style.fg, Some(Color::Gray));
+        assert!(!style.add_modifier.contains(Modifier::BOLD));
+    }
+}
