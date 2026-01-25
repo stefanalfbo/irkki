@@ -1,2 +1,2 @@
-pub(crate) mod button_widget;
+pub(crate) mod button;
 pub(crate) mod header;

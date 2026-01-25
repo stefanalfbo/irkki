@@ -5,7 +5,7 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::widget::{button_widget::ButtonWidget, header::Header};
+use crate::widget::{button::Button, header::Header};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StartSelection {
@@ -50,9 +50,9 @@ pub fn view(model: &Model, frame: &mut Frame) {
         ])
         .split(vertical[3]);
 
-    let start_button = ButtonWidget::new("Start", model.selection == StartSelection::Start);
+    let start_button = Button::new("Start", model.selection == StartSelection::Start);
     frame.render_widget(start_button, options_row[1]);
 
-    let exit_button = ButtonWidget::new("Exit", model.selection == StartSelection::Exit);
+    let exit_button = Button::new("Exit", model.selection == StartSelection::Exit);
     frame.render_widget(exit_button, options_row[3]);
 }

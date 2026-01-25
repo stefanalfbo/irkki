@@ -5,18 +5,18 @@ use ratatui::{
     widgets::{Paragraph, Widget},
 };
 
-pub struct ButtonWidget<'a> {
+pub struct Button<'a> {
     label: &'a str,
     is_selected: bool,
 }
 
-impl<'a> ButtonWidget<'a> {
+impl<'a> Button<'a> {
     pub fn new(label: &'a str, is_selected: bool) -> Self {
         Self { label, is_selected }
     }
 }
 
-impl Widget for ButtonWidget<'_> {
+impl Widget for Button<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut style = Style::default().fg(Color::LightGreen);
 
@@ -40,7 +40,7 @@ mod test {
 
     #[test]
     fn render_when_selected() {
-        let widget = ButtonWidget::new("Click Me", true);
+        let widget = Button::new("Click Me", true);
         let area = Rect::new(0, 0, 12, 3);
 
         let mut buffer = Buffer::empty(area);
@@ -56,7 +56,7 @@ mod test {
 
     #[test]
     fn render_when_not_selected() {
-        let widget = ButtonWidget::new("Click Me", false);
+        let widget = Button::new("Click Me", false);
         let area = Rect::new(0, 0, 12, 3);
 
         let mut buffer = Buffer::empty(area);
