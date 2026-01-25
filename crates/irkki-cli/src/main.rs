@@ -3,6 +3,7 @@ use color_eyre::Result;
 mod app;
 mod chat_view;
 mod start_view;
+mod widget;
 mod wizard_view;
 
 use app::App;

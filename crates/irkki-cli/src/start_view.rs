@@ -6,6 +6,8 @@ use ratatui::{
     widgets::{Block, Paragraph},
 };
 
+use crate::widget::button_widget::ButtonWidget;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StartSelection {
     Start,
@@ -57,30 +59,9 @@ pub fn view(model: &Model, frame: &mut Frame) {
         ])
         .split(vertical[3]);
 
-    let start_style = if model.selection == StartSelection::Start {
-        base_style.add_modifier(Modifier::BOLD)
-    } else {
-        base_style
-    };
-    let exit_style = if model.selection == StartSelection::Exit {
-        base_style.add_modifier(Modifier::BOLD)
-    } else {
-        base_style
-    };
+    let start_button = ButtonWidget::new("Start", model.selection == StartSelection::Start);
+    frame.render_widget(start_button, options_row[1]);
 
-    let start_block = Block::bordered()
-        .style(base_style)
-        .border_style(start_style);
-    let start = Paragraph::new("Start")
-        .style(start_style)
-        .block(start_block)
-        .alignment(Alignment::Center);
-    frame.render_widget(start, options_row[1]);
-
-    let exit_block = Block::bordered().style(base_style).border_style(exit_style);
-    let exit = Paragraph::new("Exit")
-        .style(exit_style)
-        .block(exit_block)
-        .alignment(Alignment::Center);
-    frame.render_widget(exit, options_row[3]);
+    let exit_button = ButtonWidget::new("Exit", model.selection == StartSelection::Exit);
+    frame.render_widget(exit_button, options_row[3]);
 }
