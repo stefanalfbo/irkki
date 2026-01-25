@@ -1,6 +1,7 @@
 # `irkki`
 
 [![CI](https://github.com/stefanalfbo/irkki/actions/workflows/ci.yml/badge.svg)](https://github.com/stefanalfbo/irkki/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/stefanalfbo/irkki/graph/badge.svg?)](https://codecov.io/github/stefanalfbo/irkki)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
