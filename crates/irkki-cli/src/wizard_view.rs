@@ -1,12 +1,11 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Position},
+    layout::{Constraint, Direction, Layout, Position},
     style::{Color, Style},
-    text::{Line, Span},
-    widgets::{Block, Paragraph},
+    widgets::Block,
 };
 
-use crate::widget::SimpleHeader;
+use crate::widget::{Prompt, SimpleHeader};
 
 pub struct Model {
     pub prompt: String,
@@ -35,18 +34,13 @@ pub fn view(model: &Model, frame: &mut Frame) {
     let header = SimpleHeader::new("Setup");
     frame.render_widget(header, vertical[1]);
 
-    let prompt = Paragraph::new(vec![
-        Line::from(Span::raw(&model.prompt)),
-        Line::from(Span::raw(format!("> {}", model.input.as_str()))),
-    ])
-    .style(base_style)
-    .block(Block::bordered())
-    .alignment(Alignment::Left);
+    let prompt = Prompt::new(&model.prompt, &model.input);
     frame.render_widget(prompt, vertical[2]);
 
+    let space = 2;
     #[allow(clippy::cast_possible_truncation)]
     frame.set_cursor_position(Position::new(
-        vertical[2].x + model.character_index as u16 + 2,
-        vertical[2].y + 2,
+        (model.prompt.len() + model.character_index + space) as u16,
+        vertical[2].y,
     ));
 }

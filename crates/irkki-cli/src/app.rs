@@ -151,11 +151,11 @@ impl App {
                                 self.handle_wizard_input(key.code);
                                 false
                             }
-                        CurrentScreen::Chat => {
-                            self.handle_chat_input(key.code);
-                            false
-                        }
-                    };
+                            CurrentScreen::Chat => {
+                                self.handle_chat_input(key.code);
+                                false
+                            }
+                        };
 
                         if should_exit {
                             return Ok(());
@@ -241,9 +241,9 @@ impl App {
 
     fn wizard_prompt(&self) -> String {
         match self.wizard_step {
-            WizardStep::Nickname => format!("Enter your nickname: ({}):", self.nickname),
-            WizardStep::Server => format!("Enter server address: ({}):", self.server),
-            WizardStep::Port => format!("Enter server port: ({}):", self.port),
+            WizardStep::Nickname => format!("Enter your nickname ({}):", self.nickname),
+            WizardStep::Server => format!("Enter server address ({}):", self.server),
+            WizardStep::Port => format!("Enter server port ({}):", self.port),
         }
     }
 
@@ -290,9 +290,8 @@ impl App {
         let mut client = match connect_result {
             Ok(client) => client,
             Err(error) => {
-                self.messages.push(format!(
-                    "Failed to connect to {server}:{port}: {error}"
-                ));
+                self.messages
+                    .push(format!("Failed to connect to {server}:{port}: {error}"));
                 return;
             }
         };
