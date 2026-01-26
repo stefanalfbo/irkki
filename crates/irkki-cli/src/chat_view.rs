@@ -27,13 +27,12 @@ pub fn view(model: &Model, frame: &mut Frame) {
         .block(Block::bordered().title("Input"));
     frame.render_widget(input, inner_layout[1]);
 
+    let space = 1;
+    let next_row = 1; // under "Input" title border
     #[allow(clippy::cast_possible_truncation)]
     frame.set_cursor_position(Position::new(
-        // Draw the cursor at the current position in the input field.
-        // This position is can be controlled via the left and right arrow key
-        inner_layout[1].x + model.character_index as u16 + 1,
-        // Move one line down, from the border to the input line
-        inner_layout[1].y + 1,
+        ("> ".len() + model.character_index + space) as u16,
+        (inner_layout[1].y + next_row) as u16,
     ));
 
     let messages: Vec<ListItem> = model
