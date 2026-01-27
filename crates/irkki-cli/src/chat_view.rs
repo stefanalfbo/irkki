@@ -2,11 +2,10 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Position},
     style::{Color, Style},
-    text::{Line, Span},
-    widgets::{Block, List, ListItem, Paragraph},
+    widgets::{Block, Paragraph},
 };
 
-use crate::widget::Users;
+use crate::widget::{Messages, Users};
 
 pub struct Model {
     pub input: String,
@@ -22,7 +21,6 @@ pub fn view(model: &Model, frame: &mut Frame) {
         .split(frame.area());
     let inner_layout =
         Layout::vertical([Constraint::Min(1), Constraint::Length(3)]).split(outer_layout[0]);
-    // let [messages_area, input_area] = inner_layout.areas(frame.area());
 
     let input = Paragraph::new(format!("> {}", model.input.as_str()))
         .style(Style::default().fg(Color::LightGreen))
@@ -37,18 +35,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
         (inner_layout[1].y + next_row) as u16,
     ));
 
-    let messages: Vec<ListItem> = model
-        .messages
-        .iter()
-        .enumerate()
-        .map(|(i, m)| {
-            let content = Line::from(Span::raw(format!("{i}: {m}")));
-            ListItem::new(content)
-        })
-        .collect();
-    let messages = List::new(messages)
-        .style(Style::default().fg(Color::LightGreen))
-        .block(Block::bordered().title("Chat"));
+    let messages = Messages::new(model.messages.iter().map(String::as_str).collect());
     frame.render_widget(messages, inner_layout[0]);
 
     let users = Users::new(model.users.iter().map(String::as_str).collect());
