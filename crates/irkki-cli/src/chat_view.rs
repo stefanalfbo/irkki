@@ -6,6 +6,8 @@ use ratatui::{
     widgets::{Block, List, ListItem, Paragraph},
 };
 
+use crate::widget::Users;
+
 pub struct Model {
     pub input: String,
     pub character_index: usize,
@@ -49,18 +51,6 @@ pub fn view(model: &Model, frame: &mut Frame) {
         .block(Block::bordered().title("Chat"));
     frame.render_widget(messages, inner_layout[0]);
 
-    let users: Vec<ListItem> = model
-        .users
-        .iter()
-        .enumerate()
-        .map(|(_, u)| {
-            let content = Line::from(Span::raw(format!("{u}")));
-            ListItem::new(content)
-        })
-        .collect();
-
-    let users = List::new(users)
-        .style(Style::default().fg(Color::LightGreen))
-        .block(Block::bordered().title("Users"));
+    let users = Users::new(model.users.iter().map(String::as_str).collect());
     frame.render_widget(users, outer_layout[1]);
 }
