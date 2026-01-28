@@ -1,3 +1,4 @@
+use log::info;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
 
@@ -11,7 +12,11 @@ pub struct IRCClient {
 }
 
 impl IRCClient {
-    pub fn connect(nickname: impl Into<String>, server: impl Into<String>, port: u16) -> io::Result<Self> {
+    pub fn connect(
+        nickname: impl Into<String>,
+        server: impl Into<String>,
+        port: u16,
+    ) -> io::Result<Self> {
         let mut client = Self::new(nickname, server, port);
         client.connect_inner()?;
         Ok(client)
@@ -59,6 +64,7 @@ impl IRCClient {
             match read_result {
                 Ok(0) => break,
                 Ok(_) => {
+                    info!("Received line: {}", line.trim_end());
                     let line = line.trim_end_matches(&['\r', '\n'][..]).to_string();
                     if line.starts_with("PING") {
                         let response = line.replacen("PING", "PONG", 1);
@@ -87,10 +93,9 @@ impl IRCClient {
     }
 
     fn send_line(&mut self, line: &str) -> io::Result<()> {
-        let writer = self
-            .writer
-            .as_mut()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotConnected, "Client is not connected."))?;
+        let writer = self.writer.as_mut().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
+        })?;
 
         writer.write_all(line.as_bytes())?;
         writer.write_all(b"\r\n")?;

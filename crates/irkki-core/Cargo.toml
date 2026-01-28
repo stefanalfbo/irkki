@@ -14,3 +14,4 @@ keywords = ["irc", "chat"]
 categories = ["command-line-utilities", "chat", "irc"]
 
 [dependencies]
+log = "0.4.29"
