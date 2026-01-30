@@ -102,3 +102,15 @@ impl IRCClient {
         writer.flush()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quit_without_connection_is_ok() {
+        let mut client = IRCClient::new("nick", "localhost", 6667);
+
+        assert!(client.quit().is_ok());
+    }
+}
