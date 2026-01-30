@@ -1,5 +1,5 @@
 [package]
-publish = false
+publish = true
 name = "irkki-core"
 version = "0.1.0"
 description = "The irkki core library."
