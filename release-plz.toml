@@ -1,0 +1,6 @@
+[workspace]
+release = false
+
+[[package]]
+name = "irkki-core"
+release = true
