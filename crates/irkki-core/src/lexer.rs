@@ -151,4 +151,24 @@ mod tests {
             assert_eq!(token.literal, expected_literal);
         }
     }
+
+    #[test]
+    fn test_illegal_token() {
+        let input = "COMMAND arg1\r";
+        let mut lexer = Lexer::new(input);
+
+        let expected_tokens = vec![
+            (TokenType::Word, "COMMAND"),
+            (TokenType::Space, " "),
+            (TokenType::Word, "arg1"),
+            (TokenType::Illegal, "\r"),
+            (TokenType::EOF, ""),
+        ];
+
+        for (expected_type, expected_literal) in expected_tokens {
+            let token = lexer.next_token();
+            assert_eq!(token.token_type, expected_type);
+            assert_eq!(token.literal, expected_literal);
+        }
+    }
 }
