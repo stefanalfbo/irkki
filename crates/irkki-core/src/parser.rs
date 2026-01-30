@@ -1,3 +1,5 @@
+use log::error;
+
 use crate::{Lexer, Token, TokenType};
 
 pub struct Message {
@@ -44,11 +46,19 @@ impl<'a> Parser<'a> {
         if let TokenType::Colon = token.token_type {
             let prefix_token = self.lexer.next_token();
             if prefix_token.token_type != TokenType::Word {
+                error!(
+                    "parse_prefix: Expected prefix after ':', got {}",
+                    prefix_token.literal
+                );
                 panic!("Expected prefix after ':'");
             }
 
             let space_token = self.lexer.next_token();
             if space_token.token_type != TokenType::Space {
+                error!(
+                    "parse_prefix: Expected space after prefix, got {}",
+                    space_token.literal
+                );
                 panic!("Expected space after prefix");
             }
 
@@ -59,10 +69,18 @@ impl<'a> Parser<'a> {
 
     fn parse_command(&mut self, token: &Token) -> String {
         if token.token_type != TokenType::Word {
+            error!(
+                "parse_command: Expected command token, got {}",
+                token.literal
+            );
             panic!("Expected command token");
         } else if !Self::is_only_based_on_letters(&token.literal)
             && !Self::is_three_digit_number(&token.literal)
         {
+            error!(
+                "parse_command: Command must be letters or 3 digits, got {}",
+                token.literal
+            );
             panic!("Command must consist of letters only or a number with three digits.");
         } else {
             return token.literal.clone();
@@ -117,6 +135,10 @@ impl<'a> Parser<'a> {
         }
 
         if token.token_type != TokenType::CrLf && token.token_type != TokenType::EOF {
+            error!(
+                "parse_params: Expected new line or end of file, got {}",
+                token.literal
+            );
             panic!("Expected new line or end of file");
         }
 
