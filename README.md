@@ -14,3 +14,4 @@
 
 * [IRC](https://en.wikipedia.org/wiki/IRC) (Wikipedia)
 * [Internet Relay Chat Protocol](https://datatracker.ietf.org/doc/html/rfc1459) (RFC1459)
+* [parser-tests](https://github.com/ircdocs/parser-tests)

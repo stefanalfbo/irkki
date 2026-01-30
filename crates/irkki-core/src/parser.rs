@@ -31,10 +31,12 @@ impl<'a> Parser<'a> {
 
         let command = self.parse_command(&token);
 
+        let params = self.parse_params();
+
         Message {
             prefix,
             command,
-            params: vec![],
+            params,
         }
     }
 
@@ -65,6 +67,60 @@ impl<'a> Parser<'a> {
         } else {
             return token.literal.clone();
         }
+    }
+
+    fn parse_params(&mut self) -> Vec<String> {
+        let mut params = Vec::new();
+        let mut token = self.lexer.next_token();
+
+        if token.token_type == TokenType::CrLf || token.token_type == TokenType::EOF {
+            return Vec::new();
+        }
+
+        while token.token_type == TokenType::Space {
+            let mut param_token = self.lexer.next_token();
+
+            // Skip extra spaces between params (e.g. broken servers).
+            while param_token.token_type == TokenType::Space {
+                param_token = self.lexer.next_token();
+            }
+
+            match param_token.token_type {
+                TokenType::Word => {
+                    if param_token.literal.starts_with(':') {
+                        let mut trailing = param_token.literal[1..].to_string();
+
+                        loop {
+                            let next = self.lexer.next_token();
+                            match next.token_type {
+                                TokenType::CrLf | TokenType::EOF => break,
+                                _ => trailing.push_str(&next.literal),
+                            }
+                        }
+
+                        params.push(trailing);
+                        return params;
+                    } else {
+                        params.push(param_token.literal);
+                    }
+                }
+                TokenType::CrLf | TokenType::EOF => return params,
+                _ => {
+                    panic!("Expected parameter token")
+                }
+            }
+
+            token = self.lexer.next_token();
+            if token.token_type == TokenType::CrLf || token.token_type == TokenType::EOF {
+                return params;
+            }
+        }
+
+        if token.token_type != TokenType::CrLf && token.token_type != TokenType::EOF {
+            panic!("Expected new line or end of file");
+        }
+
+        params
     }
 
     fn is_only_based_on_letters(value: &str) -> bool {
@@ -137,5 +193,393 @@ mod tests {
         let parsed_message = parser.parse_message();
 
         assert_eq!("001", parsed_message.command);
+    }
+
+    #[test]
+    fn parse_simple_message() {
+        let message = "foo bar baz asdf";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(None, parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), "asdf".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix() {
+        let message = ":coolguy foo bar baz asdf";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), "asdf".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_trailing_param() {
+        let message = "foo bar baz :asdf quux";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(None, parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec![
+                "bar".to_string(),
+                "baz".to_string(),
+                "asdf quux".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_empty_trailing_param() {
+        let message = "foo bar baz :";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(None, parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), "".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_colon_trailing_param() {
+        let message = "foo bar baz ::asdf";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(None, parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), ":asdf".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix_and_trailing() {
+        let message = ":coolguy foo bar baz :asdf quux";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec![
+                "bar".to_string(),
+                "baz".to_string(),
+                "asdf quux".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix_and_spacey_trailing() {
+        let message = ":coolguy foo bar baz :  asdf quux ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec![
+                "bar".to_string(),
+                "baz".to_string(),
+                "  asdf quux ".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_privmsg_trailing() {
+        let message = ":coolguy PRIVMSG bar :lol :) ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("PRIVMSG", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "lol :) ".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix_and_empty_trailing() {
+        let message = ":coolguy foo bar baz :";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), "".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix_and_blank_trailing() {
+        let message = ":coolguy foo bar baz :  ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("coolguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string(), "  ".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_join_with_last_param() {
+        let message = ":src JOIN #chan";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("src".to_string()), parsed_message.prefix);
+        assert_eq!("JOIN", parsed_message.command);
+        assert_eq!(vec!["#chan".to_string()], parsed_message.params);
+    }
+
+    #[test]
+    fn parse_message_join_with_trailing_last_param() {
+        let message = ":src JOIN :#chan";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("src".to_string()), parsed_message.prefix);
+        assert_eq!("JOIN", parsed_message.command);
+        assert_eq!(vec!["#chan".to_string()], parsed_message.params);
+    }
+
+    #[test]
+    fn parse_message_away_without_param() {
+        let message = ":src AWAY";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("src".to_string()), parsed_message.prefix);
+        assert_eq!("AWAY", parsed_message.command);
+        assert_eq!(Vec::<String>::new(), parsed_message.params);
+    }
+
+    #[test]
+    fn parse_message_away_without_param_with_space() {
+        let message = ":src AWAY ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("src".to_string()), parsed_message.prefix);
+        assert_eq!("AWAY", parsed_message.command);
+        assert_eq!(Vec::<String>::new(), parsed_message.params);
+    }
+
+    #[test]
+    fn parse_message_tab_not_space() {
+        let message = ":cool\tguy foo bar baz";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("cool\tguy".to_string()), parsed_message.prefix);
+        assert_eq!("foo", parsed_message.command);
+        assert_eq!(
+            vec!["bar".to_string(), "baz".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_prefix_and_control_codes_1() {
+        let message = ":coolguy!ag@net\x035w\x03ork.admin PRIVMSG foo :bar baz";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(
+            Some("coolguy!ag@net\x035w\x03ork.admin".to_string()),
+            parsed_message.prefix
+        );
+        assert_eq!("PRIVMSG", parsed_message.command);
+        assert_eq!(
+            vec!["foo".to_string(), "bar baz".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_source_with_control_codes_2() {
+        let message = ":coolguy!~ag@n\x02et\x0305w\x0fork.admin PRIVMSG foo :bar baz";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(
+            Some("coolguy!~ag@n\x02et\x0305w\x0fork.admin".to_string()),
+            parsed_message.prefix
+        );
+        assert_eq!("PRIVMSG", parsed_message.command);
+        assert_eq!(
+            vec!["foo".to_string(), "bar baz".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_trailing_params() {
+        let message = ":irc.example.com COMMAND param1 param2 :param3 param3";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("irc.example.com".to_string()), parsed_message.prefix);
+        assert_eq!("COMMAND", parsed_message.command);
+        assert_eq!(
+            vec![
+                "param1".to_string(),
+                "param2".to_string(),
+                "param3 param3".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_command_only() {
+        let message = "COMMAND";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(None, parsed_message.prefix);
+        assert_eq!("COMMAND", parsed_message.command);
+        assert_eq!(Vec::<String>::new(), parsed_message.params);
+    }
+
+    #[test]
+    fn parse_message_with_broken_unreal_erroneous_nick() {
+        let message = ":gravel.mozilla.org 432  #momo :Erroneous Nickname: Illegal characters";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(
+            Some("gravel.mozilla.org".to_string()),
+            parsed_message.prefix
+        );
+        assert_eq!("432", parsed_message.command);
+        assert_eq!(
+            vec![
+                "#momo".to_string(),
+                "Erroneous Nickname: Illegal characters".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_broken_unreal_mode_plus_n() {
+        let message = ":gravel.mozilla.org MODE #tckk +n ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(
+            Some("gravel.mozilla.org".to_string()),
+            parsed_message.prefix
+        );
+        assert_eq!("MODE", parsed_message.command);
+        assert_eq!(
+            vec!["#tckk".to_string(), "+n".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_with_broken_unreal_mode_plus_o() {
+        let message = ":services.esper.net MODE #foo-bar +o foobar  ";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(
+            Some("services.esper.net".to_string()),
+            parsed_message.prefix
+        );
+        assert_eq!("MODE", parsed_message.command);
+        assert_eq!(
+            vec![
+                "#foo-bar".to_string(),
+                "+o".to_string(),
+                "foobar".to_string()
+            ],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_mode_trailing_plus_i() {
+        let message = ":SomeOp MODE #channel :+i";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("SomeOp".to_string()), parsed_message.prefix);
+        assert_eq!("MODE", parsed_message.command);
+        assert_eq!(
+            vec!["#channel".to_string(), "+i".to_string()],
+            parsed_message.params
+        );
+    }
+
+    #[test]
+    fn parse_message_mode_trailing_user() {
+        let message = ":SomeOp MODE #channel +oo SomeUser :AnotherUser";
+        let mut parser = Parser::new(message);
+
+        let parsed_message = parser.parse_message();
+
+        assert_eq!(Some("SomeOp".to_string()), parsed_message.prefix);
+        assert_eq!("MODE", parsed_message.command);
+        assert_eq!(
+            vec![
+                "#channel".to_string(),
+                "+oo".to_string(),
+                "SomeUser".to_string(),
+                "AnotherUser".to_string()
+            ],
+            parsed_message.params
+        );
     }
 }
