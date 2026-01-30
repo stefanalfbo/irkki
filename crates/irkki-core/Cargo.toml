@@ -11,7 +11,7 @@ authors = { workspace = true }
 license = { workspace = true }
 readme = "README.md"
 keywords = ["irc", "chat"]
-categories = ["command-line-utilities", "chat", "irc"]
+categories = ["network-programming", "parser-implementation", "asynchronous"]
 
 [dependencies]
 log = "0.4.29"
