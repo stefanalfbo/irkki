@@ -1,4 +1,5 @@
 use color_eyre::Result;
+use log::{error, info};
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -298,9 +299,8 @@ impl App {
 
         std::thread::spawn(move || {
             let _ = client.listen(|line| {
-                let parsed = parse_line(&line);
                 sender
-                    .send(parsed)
+                    .send(line)
                     .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e.to_string()))
             });
             let _ = sender.send("Disconnected from server.".to_string());
@@ -314,25 +314,37 @@ impl App {
         };
 
         while let Ok(message) = receiver.try_recv() {
-            self.messages.push(message);
-        }
-    }
-}
+            let parsed = std::panic::catch_unwind(|| {
+                let mut parser = Parser::new(&message);
+                parser.parse_message()
+            });
 
-fn parse_line(line: &str) -> String {
-    let parsed = std::panic::catch_unwind(|| {
-        let mut parser = Parser::new(line);
-        parser.parse_message()
-    });
-
-    match parsed {
-        Ok(message) => {
-            if let Some(prefix) = message.prefix {
-                format!("{prefix} {}", message.command)
-            } else {
-                message.command
+            match parsed {
+                Ok(message) => match message.command.as_str() {
+                    "353" => {
+                        if let Some(names) = message.params.last() {
+                            for nick in names.split_whitespace() {
+                                if !nick.is_empty() {
+                                    self.users.push(nick.to_string());
+                                }
+                            }
+                        }
+                    }
+                    "366" => {
+                        info!("End of NAMES list.");
+                    }
+                    _ => {
+                        if let Some(prefix) = message.prefix {
+                            self.messages.push(format!("{prefix} {}", message.command));
+                        } else {
+                            self.messages.push(message.command);
+                        }
+                    }
+                },
+                Err(_) => {
+                    error!("Failed to parse message: {}", message);
+                }
             }
         }
-        Err(_) => format!("(parse error) {line}"),
     }
 }
