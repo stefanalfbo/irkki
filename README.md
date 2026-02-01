@@ -13,5 +13,13 @@
 ## Resources
 
 * [IRC](https://en.wikipedia.org/wiki/IRC) (Wikipedia)
-* [Internet Relay Chat Protocol](https://datatracker.ietf.org/doc/html/rfc1459) (RFC1459)
-* [parser-tests](https://github.com/ircdocs/parser-tests)
+* Internet Relay Chat Protocol:
+  * [RFC1459](https://datatracker.ietf.org/doc/html/rfc1459): The original IRC protocol.
+  * [RFC2810](https://datatracker.ietf.org/doc/html/rfc2810): Architecture
+  * [RFC2811](https://datatracker.ietf.org/doc/html/rfc2811): Channel management
+  * [RFC2812](https://datatracker.ietf.org/doc/html/rfc2812): Client protocol
+  * [RFC2813](https://datatracker.ietf.org/doc/html/rfc2813): Server protocol
+  * [RFC7194](https://datatracker.ietf.org/doc/html/rfc7194): Default port for IRC via TLS/SSL
+  * [Modern IRC Client Protocol](https://modern.ircdocs.horse/) 
+  * [IRCv3](https://ircv3.net/irc/): IRCv3 Specifications
+* [parser-tests](https://github.com/ircdocs/parser-tests) 
