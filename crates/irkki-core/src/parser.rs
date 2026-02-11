@@ -2,6 +2,7 @@ use log::error;
 
 use crate::{Lexer, Token, TokenType};
 
+#[derive(PartialEq)]
 pub struct Message {
     pub prefix: Option<String>,
     pub command: String,
@@ -24,7 +25,7 @@ impl<'a> Parser<'a> {
 
         // Prefix handling
         let prefix = self.parse_prefix(&token);
-        token = if let Some(_) = &prefix {
+        token = if prefix.is_some() {
             // Move to the next token after prefix
             self.lexer.next_token()
         } else {
@@ -83,7 +84,7 @@ impl<'a> Parser<'a> {
             );
             panic!("Command must consist of letters only or a number with three digits.");
         } else {
-            return token.literal.clone();
+            token.literal.clone()
         }
     }
 

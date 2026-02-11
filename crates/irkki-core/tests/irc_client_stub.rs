@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use irkki_core::IRCClient;
+use irkki_core::{IRCClient, IRCEvent};
 
 fn spawn_stub_server() -> (u16, mpsc::Receiver<Vec<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -54,8 +54,8 @@ fn client_handles_ping_and_receives_message() {
 
     let mut seen = Vec::new();
     client
-        .listen(|line| {
-            seen.push(line);
+        .listen(|event| {
+            seen.push(event);
             Ok(())
         })
         .unwrap();
@@ -66,5 +66,9 @@ fn client_handles_ping_and_receives_message() {
     assert!(received[2].starts_with("JOIN "));
     assert_eq!(received[3], "PONG :stub");
 
-    assert_eq!(seen, vec![":server 001 nick :welcome"]);
+    let IRCEvent::Message(m) = &seen[0] else {
+        panic!("Expected a Message event");
+    };
+
+    assert_eq!(m.command, "001");
 }

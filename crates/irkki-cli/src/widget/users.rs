@@ -21,9 +21,8 @@ impl Widget for Users<'_> {
         let users: Vec<ListItem> = self
             .users
             .iter()
-            .enumerate()
-            .map(|(_, u)| {
-                let content = Line::from(Span::raw(format!("{u}")));
+            .map(|u| {
+                let content = Line::from(Span::raw(u.to_string()));
                 ListItem::new(content)
             })
             .collect();

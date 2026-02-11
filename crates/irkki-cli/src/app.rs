@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use log::{error, info};
+use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -13,7 +13,7 @@ use std::{
 use crate::chat_view::{Model as ChatModel, view as chat_view};
 use crate::start_view::{Model as StartModel, StartSelection, view as start_view};
 use crate::wizard_view::{Model as WizardModel, view as wizard_view};
-use irkki_core::{IRCClient, Parser};
+use irkki_core::{IRCClient, IRCEvent};
 
 pub enum CurrentScreen {
     Start,
@@ -42,7 +42,7 @@ pub struct App {
     current_screen: CurrentScreen,
     start_selection: StartSelection,
     wizard_step: WizardStep,
-    incoming: Option<Receiver<String>>,
+    incoming: Option<Receiver<IRCEvent>>,
 }
 
 const INPUT_CHARACTER_START: usize = 3;
@@ -139,29 +139,28 @@ impl App {
             self.drain_incoming();
             terminal.draw(|frame| self.draw(frame))?;
 
-            if event::poll(Duration::from_millis(50))? {
-                if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
-                        if matches!(key.code, KeyCode::Char('p')) {
-                            return Ok(());
-                        }
+            if event::poll(Duration::from_millis(50))?
+                && let Event::Key(key) = event::read()?
+                && key.kind == KeyEventKind::Press
+            {
+                if matches!(key.code, KeyCode::Char('p')) {
+                    return Ok(());
+                }
 
-                        let should_exit = match self.current_screen {
-                            CurrentScreen::Start => self.handle_start_input(key.code),
-                            CurrentScreen::Wizard => {
-                                self.handle_wizard_input(key.code);
-                                false
-                            }
-                            CurrentScreen::Chat => {
-                                self.handle_chat_input(key.code);
-                                false
-                            }
-                        };
-
-                        if should_exit {
-                            return Ok(());
-                        }
+                let should_exit = match self.current_screen {
+                    CurrentScreen::Start => self.handle_start_input(key.code),
+                    CurrentScreen::Wizard => {
+                        self.handle_wizard_input(key.code);
+                        false
                     }
+                    CurrentScreen::Chat => {
+                        self.handle_chat_input(key.code);
+                        false
+                    }
+                };
+
+                if should_exit {
+                    return Ok(());
                 }
             }
         }
@@ -284,7 +283,7 @@ impl App {
         let nickname = self.nickname.clone();
         let server = self.server.clone();
         let port = self.port;
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel::<IRCEvent>();
         self.incoming = Some(receiver);
 
         let connect_result = IRCClient::connect(nickname.clone(), server.clone(), port);
@@ -298,12 +297,12 @@ impl App {
         };
 
         std::thread::spawn(move || {
-            let _ = client.listen(|line| {
+            let _ = client.listen(|event| {
                 sender
-                    .send(line)
+                    .send(event)
                     .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e.to_string()))
             });
-            let _ = sender.send("Disconnected from server.".to_string());
+            let _ = sender.send(IRCEvent::Raw("Disconnected from server.".to_string()));
         });
     }
 
@@ -313,14 +312,9 @@ impl App {
             None => return,
         };
 
-        while let Ok(message) = receiver.try_recv() {
-            let parsed = std::panic::catch_unwind(|| {
-                let mut parser = Parser::new(&message);
-                parser.parse_message()
-            });
-
-            match parsed {
-                Ok(message) => match message.command.as_str() {
+        while let Ok(event) = receiver.try_recv() {
+            match event {
+                IRCEvent::Message(message) => match message.command.as_str() {
                     "353" => {
                         if let Some(names) = message.params.last() {
                             for nick in names.split_whitespace() {
@@ -341,9 +335,7 @@ impl App {
                         }
                     }
                 },
-                Err(_) => {
-                    error!("Failed to parse message: {}", message);
-                }
+                IRCEvent::Raw(raw) => self.messages.push(raw),
             }
         }
     }

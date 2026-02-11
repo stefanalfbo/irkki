@@ -2,6 +2,23 @@ use log::info;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
 
+use crate::{Message, Parser};
+
+#[derive(PartialEq)]
+pub enum IRCEvent {
+    Message(Message),
+    Raw(String),
+}
+
+impl std::fmt::Debug for IRCEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IRCEvent::Message(msg) => write!(f, "IRCEvent::Message(cmd: {})", msg.command),
+            IRCEvent::Raw(s) => write!(f, "IRCEvent::Raw({})", s),
+        }
+    }
+}
+
 pub struct IRCClient {
     nickname: String,
     server: String,
@@ -50,7 +67,7 @@ impl IRCClient {
 
     pub fn listen<F>(&mut self, mut message_handler: F) -> io::Result<()>
     where
-        F: FnMut(String) -> io::Result<()>,
+        F: FnMut(IRCEvent) -> io::Result<()>,
     {
         loop {
             let mut line = String::new();
@@ -72,7 +89,10 @@ impl IRCClient {
                         continue;
                     }
 
-                    message_handler(line)?;
+                    let mut parser = Parser::new(&line);
+                    let message = parser.parse_message();
+
+                    message_handler(IRCEvent::Message(message))?;
                 }
                 Err(_) => break,
             }
