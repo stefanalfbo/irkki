@@ -82,17 +82,20 @@ impl IRCClient {
                 Ok(0) => break,
                 Ok(_) => {
                     info!("Received line: {}", line.trim_end());
-                    let line = line.trim_end_matches(&['\r', '\n'][..]).to_string();
-                    if line.starts_with("PING") {
-                        let response = line.replacen("PING", "PONG", 1);
-                        self.send_line(&response)?;
-                        continue;
-                    }
 
                     let mut parser = Parser::new(&line);
                     let message = parser.parse_message();
 
-                    message_handler(IRCEvent::Message(message))?;
+                    match message.command {
+                        val if val == "PING".to_owned() => {
+                            let response = format!("PONG :{}", message.params.join(" "));
+                            self.send_line(&response)?;
+                            continue;
+                        }
+                        _ => {
+                            message_handler(IRCEvent::Message(message))?;
+                        }
+                    }
                 }
                 Err(_) => break,
             }
