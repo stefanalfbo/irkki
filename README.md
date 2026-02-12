@@ -10,6 +10,22 @@
 
 **Irkki** is an open-source IRC (Internet Relay Chat) client, built as a hobby project to deepen my understanding of the IRC protocol and to explore the capabilities of the [ratatui library](https://ratatui.rs/). The name irkki is a nod to the Finnish origins of IRC, as it was a Finnish individual, Jarkko "WiZ" Oikarinen, who created the first IRC client.
 
+## Run with logging
+
+Set `RUST_LOG` before running to enable runtime logs.
+
+Bash (Linux):
+
+```bash
+RUST_LOG=info cargo run
+```
+
+PowerShell (Windows):
+
+```powershell
+$env:RUST_LOG="info"; cargo run
+```
+
 ## Resources
 
 * [IRC](https://en.wikipedia.org/wiki/IRC) (Wikipedia)
