@@ -1,5 +1,4 @@
 use color_eyre::Result;
-use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -314,27 +313,13 @@ impl App {
 
         while let Ok(event) = receiver.try_recv() {
             match event {
-                IRCEvent::Message(message) => match message.command.as_str() {
-                    "353" => {
-                        if let Some(names) = message.params.last() {
-                            for nick in names.split_whitespace() {
-                                if !nick.is_empty() {
-                                    self.users.push(nick.to_string());
-                                }
-                            }
-                        }
-                    }
-                    "366" => {
-                        info!("End of NAMES list.");
-                    }
-                    _ => {
-                        if let Some(prefix) = message.prefix {
-                            self.messages.push(format!("{prefix} {}", message.command));
-                        } else {
-                            self.messages.push(message.command);
-                        }
-                    }
-                },
+                IRCEvent::Users(u) => {
+                    self.users.extend(u);
+                }
+                IRCEvent::Message(message) => {
+                    self.messages
+                        .push(format!("{} {}", message.command, message.params.join(" ")));
+                }
                 IRCEvent::Raw(raw) => self.messages.push(raw),
             }
         }

@@ -7,6 +7,7 @@ use crate::{Message, Parser};
 #[derive(PartialEq)]
 pub enum IRCEvent {
     Message(Message),
+    Users(Vec<String>),
     Raw(String),
 }
 
@@ -15,6 +16,7 @@ impl std::fmt::Debug for IRCEvent {
         match self {
             IRCEvent::Message(msg) => write!(f, "IRCEvent::Message(cmd: {})", msg.command),
             IRCEvent::Raw(s) => write!(f, "IRCEvent::Raw({})", s),
+            IRCEvent::Users(users) => write!(f, "IRCEvent::Users({})", users.join(", ")),
         }
     }
 }
@@ -86,11 +88,25 @@ impl IRCClient {
                     let mut parser = Parser::new(&line);
                     let message = parser.parse_message();
 
-                    match message.command {
-                        val if val == "PING".to_owned() => {
+                    match message.command.as_str() {
+                        "PING" => {
                             let response = format!("PONG :{}", message.params.join(" "));
                             self.send_line(&response)?;
                             continue;
+                        }
+                        "353" => {
+                            if let Some(names) = message.params.last() {
+                                let mut users: Vec<String> = Vec::new();
+                                for nick in names.split_whitespace() {
+                                    if !nick.is_empty() {
+                                        users.push(nick.to_string());
+                                    }
+                                }
+                                message_handler(IRCEvent::Users(users))?;
+                            }
+                        }
+                        "366" => {
+                            info!("End of NAMES list.");
                         }
                         _ => {
                             message_handler(IRCEvent::Message(message))?;
@@ -135,5 +151,30 @@ mod tests {
         let mut client = IRCClient::new("nick", "localhost", 6667);
 
         assert!(client.quit().is_ok());
+    }
+
+    #[test]
+    fn irc_event_debug_formats_message_variant() {
+        let event = IRCEvent::Message(Message {
+            prefix: None,
+            command: "NOTICE".to_string(),
+            params: vec!["#test".to_string(), "hello".to_string()],
+        });
+
+        assert_eq!(format!("{event:?}"), "IRCEvent::Message(cmd: NOTICE)");
+    }
+
+    #[test]
+    fn irc_event_debug_formats_users_variant() {
+        let event = IRCEvent::Users(vec!["alice".to_string(), "bob".to_string()]);
+
+        assert_eq!(format!("{event:?}"), "IRCEvent::Users(alice, bob)");
+    }
+
+    #[test]
+    fn irc_event_debug_formats_raw_variant() {
+        let event = IRCEvent::Raw("Connected".to_string());
+
+        assert_eq!(format!("{event:?}"), "IRCEvent::Raw(Connected)");
     }
 }
