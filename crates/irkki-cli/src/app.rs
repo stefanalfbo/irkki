@@ -320,6 +320,10 @@ impl App {
                     self.messages
                         .push(format!("{} {}", message.command, message.params.join(" ")));
                 }
+                IRCEvent::MessageOfTheDay(motd) => {
+                    self.messages.push("Message of the Day:".to_string());
+                    self.messages.extend(motd);
+                }
                 IRCEvent::Raw(raw) => self.messages.push(raw),
             }
         }

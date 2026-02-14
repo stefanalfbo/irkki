@@ -8,6 +8,7 @@ use crate::{Message, Parser};
 pub enum IRCEvent {
     Message(Message),
     Users(Vec<String>),
+    MessageOfTheDay(Vec<String>),
     Raw(String),
 }
 
@@ -17,6 +18,9 @@ impl std::fmt::Debug for IRCEvent {
             IRCEvent::Message(msg) => write!(f, "IRCEvent::Message(cmd: {})", msg.command),
             IRCEvent::Raw(s) => write!(f, "IRCEvent::Raw({})", s),
             IRCEvent::Users(users) => write!(f, "IRCEvent::Users({})", users.join(", ")),
+            IRCEvent::MessageOfTheDay(motd) => {
+                write!(f, "IRCEvent::MessageOfTheDay({})", motd.join("\n"))
+            }
         }
     }
 }
@@ -71,6 +75,8 @@ impl IRCClient {
     where
         F: FnMut(IRCEvent) -> io::Result<()>,
     {
+        let mut message_of_the_day = Vec::new();
+
         loop {
             let mut line = String::new();
             let read_result = {
@@ -107,6 +113,17 @@ impl IRCClient {
                         }
                         "366" => {
                             info!("End of NAMES list.");
+                        }
+                        "375" => {
+                            message_of_the_day.clear();
+                        }
+                        "372" => {
+                            if let Some(motd_line) = message.params.last() {
+                                message_of_the_day.push(motd_line.to_string());
+                            }
+                        }
+                        "376" => {
+                            message_handler(IRCEvent::MessageOfTheDay(message_of_the_day.clone()))?;
                         }
                         _ => {
                             message_handler(IRCEvent::Message(message))?;
