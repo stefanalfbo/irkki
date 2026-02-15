@@ -42,6 +42,7 @@ pub struct App {
     start_selection: StartSelection,
     wizard_step: WizardStep,
     incoming: Option<Receiver<IRCEvent>>,
+    irc_client: Option<IRCClient>,
 }
 
 const INPUT_CHARACTER_START: usize = 3;
@@ -60,6 +61,7 @@ impl App {
             start_selection: StartSelection::Start,
             wizard_step: WizardStep::Nickname,
             incoming: None,
+            irc_client: None,
         }
     }
 
@@ -122,13 +124,33 @@ impl App {
     }
 
     fn submit_message(&mut self) {
-        if self.input.trim() == "/quit" {
+        let message = self.input.trim().to_string();
+
+        if message == "/quit" {
+            if let Some(client) = &mut self.irc_client {
+                client.quit().ok();
+            }
             self.input.clear();
             self.reset_cursor();
             self.current_screen = CurrentScreen::Start;
             return;
         }
-        self.messages.push(self.input.clone());
+
+        if !message.is_empty() {
+            if let Some(client) = &mut self.irc_client {
+                if let Err(error) = client.send_message(&message) {
+                    self.messages
+                        .push(format!("Failed to send message: {error}"));
+                } else {
+                    self.messages
+                        .push(format!("<{}> {}", self.nickname, message));
+                }
+            } else {
+                self.messages
+                    .push("Not connected to an IRC server.".to_string());
+            }
+        }
+
         self.input.clear();
         self.reset_cursor();
     }
@@ -279,13 +301,12 @@ impl App {
     }
 
     fn start_irc_connection(&mut self) {
-        let nickname = self.nickname.clone();
         let server = self.server.clone();
         let port = self.port;
         let (sender, receiver) = mpsc::channel::<IRCEvent>();
         self.incoming = Some(receiver);
 
-        let connect_result = IRCClient::connect(nickname.clone(), server.clone(), port);
+        let connect_result = IRCClient::connect(self.nickname.clone(), server.clone(), port);
         let mut client = match connect_result {
             Ok(client) => client,
             Err(error) => {
@@ -295,14 +316,18 @@ impl App {
             }
         };
 
-        std::thread::spawn(move || {
-            let _ = client.listen(|event| {
-                sender
-                    .send(event)
-                    .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e.to_string()))
-            });
-            let _ = sender.send(IRCEvent::Raw("Disconnected from server.".to_string()));
+        let listen_result = client.start_listening(move |event| {
+            sender
+                .send(event)
+                .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e.to_string()))
         });
+        if let Err(error) = listen_result {
+            self.messages
+                .push(format!("Failed to start listener: {error}"));
+            return;
+        }
+
+        self.irc_client = Some(client);
     }
 
     fn drain_incoming(&mut self) {

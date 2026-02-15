@@ -1,6 +1,8 @@
 use log::info;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
 
 use crate::{Message, Parser};
 
@@ -31,7 +33,7 @@ pub struct IRCClient {
     port: u16,
     channel: String,
     reader: Option<BufReader<TcpStream>>,
-    writer: Option<BufWriter<TcpStream>>,
+    writer: Option<Arc<Mutex<BufWriter<TcpStream>>>>,
 }
 
 impl IRCClient {
@@ -59,7 +61,7 @@ impl IRCClient {
     fn connect_inner(&mut self) -> io::Result<()> {
         let stream = TcpStream::connect((self.server.as_str(), self.port))?;
         let reader = BufReader::new(stream.try_clone()?);
-        let writer = BufWriter::new(stream);
+        let writer = Arc::new(Mutex::new(BufWriter::new(stream)));
 
         self.reader = Some(reader);
         self.writer = Some(writer);
@@ -71,20 +73,56 @@ impl IRCClient {
         Ok(())
     }
 
+    pub fn send_message(&mut self, message: impl AsRef<str>) -> io::Result<()> {
+        let message = message.as_ref().trim();
+        if message.is_empty() {
+            return Ok(());
+        }
+
+        self.send_line(&format!("PRIVMSG {} :{}", self.channel, message))
+    }
+
+    pub fn start_listening<F>(&mut self, mut message_handler: F) -> io::Result<JoinHandle<()>>
+    where
+        F: FnMut(IRCEvent) -> io::Result<()> + Send + 'static,
+    {
+        let mut reader = self.reader.take().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
+        })?;
+        let writer = self.writer.clone().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
+        })?;
+
+        Ok(thread::spawn(move || {
+            let _ = Self::listen_loop(&mut reader, writer, &mut message_handler);
+        }))
+    }
+
     pub fn listen<F>(&mut self, mut message_handler: F) -> io::Result<()>
     where
         F: FnMut(IRCEvent) -> io::Result<()>,
     {
-        let mut message_of_the_day = Vec::new();
+        let writer = self.writer.clone().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
+        })?;
+        let reader = self.reader.as_mut().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
+        })?;
+        Self::listen_loop(reader, writer, &mut message_handler)
+    }
 
+    fn listen_loop<F>(
+        reader: &mut BufReader<TcpStream>,
+        writer: Arc<Mutex<BufWriter<TcpStream>>>,
+        message_handler: &mut F,
+    ) -> io::Result<()>
+    where
+        F: FnMut(IRCEvent) -> io::Result<()>,
+    {
+        let mut message_of_the_day = Vec::new();
         loop {
             let mut line = String::new();
-            let read_result = {
-                let reader = self.reader.as_mut().ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
-                })?;
-                reader.read_line(&mut line)
-            };
+            let read_result = reader.read_line(&mut line);
 
             match read_result {
                 Ok(0) => break,
@@ -97,7 +135,7 @@ impl IRCClient {
                     match message.command.as_str() {
                         "PING" => {
                             let response = format!("PONG :{}", message.params.join(" "));
-                            self.send_line(&response)?;
+                            Self::send_line_with_writer(&writer, &response)?;
                             continue;
                         }
                         "353" => {
@@ -149,9 +187,14 @@ impl IRCClient {
     }
 
     fn send_line(&mut self, line: &str) -> io::Result<()> {
-        let writer = self.writer.as_mut().ok_or_else(|| {
+        let writer = self.writer.as_ref().ok_or_else(|| {
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
+        Self::send_line_with_writer(writer, line)
+    }
+
+    fn send_line_with_writer(writer: &Arc<Mutex<BufWriter<TcpStream>>>, line: &str) -> io::Result<()> {
+        let mut writer = writer.lock().map_err(|_| io::Error::other("Writer lock poisoned"))?;
 
         writer.write_all(line.as_bytes())?;
         writer.write_all(b"\r\n")?;
