@@ -184,10 +184,6 @@ impl App {
                 && let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
             {
-                if matches!(key.code, KeyCode::Char('p')) {
-                    return Ok(());
-                }
-
                 let should_exit = match self.current_screen {
                     CurrentScreen::Start => self.handle_start_input(key.code),
                     CurrentScreen::Wizard => {
