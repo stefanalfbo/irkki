@@ -56,3 +56,64 @@ pub fn view(model: &Model, frame: &mut Frame) {
     let exit_button = Button::new("Exit", model.selection == StartSelection::Exit);
     frame.render_widget(exit_button, options_row[3]);
 }
+
+#[cfg(test)]
+mod test {
+    use ratatui::{
+        Terminal,
+        backend::TestBackend,
+        buffer::Buffer,
+        style::{Color, Modifier},
+    };
+
+    use super::*;
+
+    fn render(selection: StartSelection) -> Buffer {
+        let backend = TestBackend::new(40, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let model = Model { selection };
+
+        terminal.draw(|frame| view(&model, frame)).unwrap();
+        terminal.backend().buffer().clone()
+    }
+
+    #[test]
+    fn render_with_start_selected() {
+        let buffer = render(StartSelection::Start);
+
+        let row = |y| -> String { (0..40).map(|x| buffer[(x, y)].symbol()).collect::<String>() };
+
+        assert_eq!(row(0), "┌──────────────────────────────────────┐");
+        assert_eq!(row(3), "│                 irkki                │");
+        assert_eq!(row(4), "│             An IRC client            │");
+        assert_eq!(row(7), "│         Start           Exit         │");
+        assert_eq!(row(14), "└──────────────────────────────────────┘");
+
+        let border_style = buffer[(0, 0)].style();
+        assert_eq!(border_style.fg, Some(Color::LightGreen));
+
+        let start_style = buffer[(10, 7)].style();
+        assert_eq!(start_style.fg, Some(Color::LightGreen));
+        assert!(start_style.add_modifier.contains(Modifier::BOLD));
+
+        let exit_style = buffer[(26, 7)].style();
+        assert_eq!(exit_style.fg, Some(Color::Gray));
+        assert!(!exit_style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_with_exit_selected() {
+        let buffer = render(StartSelection::Exit);
+
+        let row = |y| -> String { (0..40).map(|x| buffer[(x, y)].symbol()).collect::<String>() };
+        assert_eq!(row(7), "│         Start           Exit         │");
+
+        let start_style = buffer[(10, 7)].style();
+        assert_eq!(start_style.fg, Some(Color::Gray));
+        assert!(!start_style.add_modifier.contains(Modifier::BOLD));
+
+        let exit_style = buffer[(26, 7)].style();
+        assert_eq!(exit_style.fg, Some(Color::LightGreen));
+        assert!(exit_style.add_modifier.contains(Modifier::BOLD));
+    }
+}
