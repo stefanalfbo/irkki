@@ -1,4 +1,4 @@
-use log::info;
+use log::{error, info};
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -114,9 +114,11 @@ impl IRCClient {
         F: FnMut(IRCEvent) -> io::Result<()> + Send + 'static,
     {
         let mut reader = self.reader.take().ok_or_else(|| {
+            error!("Cannot start listening: Client is not connected.");
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
         let writer = self.writer.clone().ok_or_else(|| {
+            error!("Cannot start listening: Client is not connected.");
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
 
@@ -130,9 +132,11 @@ impl IRCClient {
         F: FnMut(IRCEvent) -> io::Result<()>,
     {
         let writer = self.writer.clone().ok_or_else(|| {
+            error!("Cannot start listening: Client is not connected.");
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
         let reader = self.reader.as_mut().ok_or_else(|| {
+            error!("Cannot start listening: Client is not connected.");
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
         Self::listen_loop(reader, writer, &mut message_handler)
