@@ -73,12 +73,39 @@ impl IRCClient {
         Ok(())
     }
 
+    pub fn quit(&mut self) -> io::Result<()> {
+        if self.writer.is_none() {
+            return Ok(());
+        }
+
+        self.send_line(&format!("PART {} :Goodbye!", self.channel))?;
+        info!("Sent PART command for channel {}", self.channel);
+        self.send_line("QUIT :Client closed")?;
+        info!("Sent QUIT command");
+
+        Ok(())
+    }
+
+    pub fn whois(&mut self, nickname: impl AsRef<str>) -> io::Result<()> {
+        let nickname = nickname.as_ref().trim();
+        if nickname.is_empty() {
+            return Ok(());
+        }
+
+        info!("Sending WHOIS command for nickname: {}", nickname);
+        self.send_line(&format!("WHOIS {}", nickname))
+    }
+
     pub fn send_message(&mut self, message: impl AsRef<str>) -> io::Result<()> {
         let message = message.as_ref().trim();
         if message.is_empty() {
             return Ok(());
         }
 
+        info!(
+            "Sending PRIVMSG command to channel {}: {}",
+            self.channel, message
+        );
         self.send_line(&format!("PRIVMSG {} :{}", self.channel, message))
     }
 
@@ -175,17 +202,6 @@ impl IRCClient {
         Ok(())
     }
 
-    pub fn quit(&mut self) -> io::Result<()> {
-        if self.writer.is_none() {
-            return Ok(());
-        }
-
-        self.send_line(&format!("PART {} :Goodbye!", self.channel))?;
-        self.send_line("QUIT :Client closed")?;
-
-        Ok(())
-    }
-
     fn send_line(&mut self, line: &str) -> io::Result<()> {
         let writer = self.writer.as_ref().ok_or_else(|| {
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
@@ -193,8 +209,13 @@ impl IRCClient {
         Self::send_line_with_writer(writer, line)
     }
 
-    fn send_line_with_writer(writer: &Arc<Mutex<BufWriter<TcpStream>>>, line: &str) -> io::Result<()> {
-        let mut writer = writer.lock().map_err(|_| io::Error::other("Writer lock poisoned"))?;
+    fn send_line_with_writer(
+        writer: &Arc<Mutex<BufWriter<TcpStream>>>,
+        line: &str,
+    ) -> io::Result<()> {
+        let mut writer = writer
+            .lock()
+            .map_err(|_| io::Error::other("Writer lock poisoned"))?;
 
         writer.write_all(line.as_bytes())?;
         writer.write_all(b"\r\n")?;

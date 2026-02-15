@@ -1,4 +1,5 @@
 use color_eyre::Result;
+use log::{debug, error};
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -126,17 +127,36 @@ impl App {
     fn submit_message(&mut self) {
         let message = self.input.trim().to_string();
 
-        if message == "/quit" {
+        debug!("Submitting message: {}", message);
+
+        if message.starts_with("/whois") {
+            if let Some(client) = &mut self.irc_client {
+                let nickname = message.trim_start_matches("/whois").trim();
+
+                if let Err(error) = client.whois(&nickname) {
+                    error!("Failed to perform whois for {}: {}", nickname, error);
+                    self.messages
+                        .push(format!("Failed to perform whois: {error}"));
+                }
+            } else {
+                error!("Cannot perform whois: Not connected to an IRC server.");
+                self.messages
+                    .push("Not connected to an IRC server.".to_string());
+            }
+            self.input.clear();
+            self.reset_cursor();
+
+            return;
+        } else if message == "/quit" {
             if let Some(client) = &mut self.irc_client {
                 client.quit().ok();
             }
             self.input.clear();
             self.reset_cursor();
             self.current_screen = CurrentScreen::Start;
-            return;
-        }
 
-        if !message.is_empty() {
+            return;
+        } else if !message.is_empty() {
             if let Some(client) = &mut self.irc_client {
                 if let Err(error) = client.send_message(&message) {
                     self.messages
@@ -149,10 +169,10 @@ impl App {
                 self.messages
                     .push("Not connected to an IRC server.".to_string());
             }
-        }
 
-        self.input.clear();
-        self.reset_cursor();
+            self.input.clear();
+            self.reset_cursor();
+        }
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
