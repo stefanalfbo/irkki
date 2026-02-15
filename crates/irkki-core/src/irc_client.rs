@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{debug, error, info};
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -43,7 +43,7 @@ impl IRCClient {
         port: u16,
     ) -> io::Result<Self> {
         let mut client = Self::new(nickname, server, port);
-        client.connect_inner()?;
+        client.initialize_connection()?;
         Ok(client)
     }
 
@@ -58,7 +58,7 @@ impl IRCClient {
         }
     }
 
-    fn connect_inner(&mut self) -> io::Result<()> {
+    fn initialize_connection(&mut self) -> io::Result<()> {
         let stream = TcpStream::connect((self.server.as_str(), self.port))?;
         let reader = BufReader::new(stream.try_clone()?);
         let writer = Arc::new(Mutex::new(BufWriter::new(stream)));
@@ -79,9 +79,7 @@ impl IRCClient {
         }
 
         self.send_line(&format!("PART {} :Goodbye!", self.channel))?;
-        info!("Sent PART command for channel {}", self.channel);
         self.send_line("QUIT :Client closed")?;
-        info!("Sent QUIT command");
 
         Ok(())
     }
@@ -92,7 +90,6 @@ impl IRCClient {
             return Ok(());
         }
 
-        info!("Sending WHOIS command for nickname: {}", nickname);
         self.send_line(&format!("WHOIS {}", nickname))
     }
 
@@ -102,10 +99,6 @@ impl IRCClient {
             return Ok(());
         }
 
-        info!(
-            "Sending PRIVMSG command to channel {}: {}",
-            self.channel, message
-        );
         self.send_line(&format!("PRIVMSG {} :{}", self.channel, message))
     }
 
@@ -127,21 +120,6 @@ impl IRCClient {
         }))
     }
 
-    pub fn listen<F>(&mut self, mut message_handler: F) -> io::Result<()>
-    where
-        F: FnMut(IRCEvent) -> io::Result<()>,
-    {
-        let writer = self.writer.clone().ok_or_else(|| {
-            error!("Cannot start listening: Client is not connected.");
-            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
-        })?;
-        let reader = self.reader.as_mut().ok_or_else(|| {
-            error!("Cannot start listening: Client is not connected.");
-            io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
-        })?;
-        Self::listen_loop(reader, writer, &mut message_handler)
-    }
-
     fn listen_loop<F>(
         reader: &mut BufReader<TcpStream>,
         writer: Arc<Mutex<BufWriter<TcpStream>>>,
@@ -150,13 +128,18 @@ impl IRCClient {
     where
         F: FnMut(IRCEvent) -> io::Result<()>,
     {
+        info!("Started listening for IRC messages.");
+
         let mut message_of_the_day = Vec::new();
         loop {
             let mut line = String::new();
             let read_result = reader.read_line(&mut line);
 
             match read_result {
-                Ok(0) => break,
+                Ok(0) => {
+                    info!("Connection closed by server.");
+                    break;
+                }
                 Ok(_) => {
                     info!("Received line: {}", line.trim_end());
 
@@ -165,6 +148,7 @@ impl IRCClient {
 
                     match message.command.as_str() {
                         "PING" => {
+                            debug!("Received PING, sending PONG response.");
                             let response = format!("PONG :{}", message.params.join(" "));
                             Self::send_line_with_writer(&writer, &response)?;
                             continue;
@@ -177,13 +161,15 @@ impl IRCClient {
                                         users.push(nick.to_string());
                                     }
                                 }
+                                debug!("Received NAMES list: {}", users.join(", "));
                                 message_handler(IRCEvent::Users(users))?;
                             }
                         }
                         "366" => {
-                            info!("End of NAMES list.");
+                            debug!("End of NAMES list.");
                         }
                         "375" => {
+                            debug!("Start of MOTD.");
                             message_of_the_day.clear();
                         }
                         "372" => {
@@ -192,6 +178,7 @@ impl IRCClient {
                             }
                         }
                         "376" => {
+                            debug!("End of MOTD.");
                             message_handler(IRCEvent::MessageOfTheDay(message_of_the_day.clone()))?;
                         }
                         _ => {
@@ -208,8 +195,11 @@ impl IRCClient {
 
     fn send_line(&mut self, line: &str) -> io::Result<()> {
         let writer = self.writer.as_ref().ok_or_else(|| {
+            error!("Cannot send line: Client is not connected.");
             io::Error::new(io::ErrorKind::NotConnected, "Client is not connected.")
         })?;
+
+        debug!("Sending line: {}", line);
         Self::send_line_with_writer(writer, line)
     }
 

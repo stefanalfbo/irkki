@@ -52,10 +52,10 @@ fn client_handles_ping_and_receives_message() {
 
     let mut client = IRCClient::connect("nick", "127.0.0.1", port).unwrap();
 
-    let mut seen = Vec::new();
-    client
-        .listen(|event| {
-            seen.push(event);
+    let (event_tx, event_rx) = mpsc::channel();
+    let listener = client
+        .start_listening(move |event| {
+            let _ = event_tx.send(event);
             Ok(())
         })
         .unwrap();
@@ -66,9 +66,12 @@ fn client_handles_ping_and_receives_message() {
     assert!(received[2].starts_with("JOIN "));
     assert_eq!(received[3], "PONG :stub");
 
-    let IRCEvent::Message(m) = &seen[0] else {
+    let event = event_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let IRCEvent::Message(m) = event else {
         panic!("Expected a Message event");
     };
 
     assert_eq!(m.command, "001");
+
+    listener.join().unwrap();
 }
