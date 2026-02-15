@@ -151,8 +151,12 @@ impl IRCClient {
                             debug!("Received PING, sending PONG response.");
                             let response = format!("PONG :{}", message.params.join(" "));
                             Self::send_line_with_writer(&writer, &response)?;
-                            continue;
                         }
+                        // RPL_ENDOFWHOIS
+                        "318" => {
+                            debug!("Received end of WHOIS response.");
+                        }
+                        // RPL_NAMREPLY
                         "353" => {
                             if let Some(names) = message.params.last() {
                                 let mut users: Vec<String> = Vec::new();
@@ -165,18 +169,22 @@ impl IRCClient {
                                 message_handler(IRCEvent::Users(users))?;
                             }
                         }
+                        // RPL_ENDOFNAMES
                         "366" => {
                             debug!("End of NAMES list.");
                         }
-                        "375" => {
-                            debug!("Start of MOTD.");
-                            message_of_the_day.clear();
-                        }
+                        // RPL_MOTD
                         "372" => {
                             if let Some(motd_line) = message.params.last() {
                                 message_of_the_day.push(motd_line.to_string());
                             }
                         }
+                        // RPL_MOTDSTART
+                        "375" => {
+                            debug!("Start of MOTD.");
+                            message_of_the_day.clear();
+                        }
+                        // RPL_ENDOFMOTD
                         "376" => {
                             debug!("End of MOTD.");
                             message_handler(IRCEvent::MessageOfTheDay(message_of_the_day.clone()))?;
