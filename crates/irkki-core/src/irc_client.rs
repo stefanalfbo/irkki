@@ -93,6 +93,17 @@ impl IRCClient {
         self.send_line(&format!("WHOIS {}", nickname))
     }
 
+    pub fn change_nickname(&mut self, new_nickname: impl AsRef<str>) -> io::Result<()> {
+        let new_nickname = new_nickname.as_ref().trim();
+        if new_nickname.is_empty() {
+            return Ok(());
+        }
+
+        self.send_line(&format!("NICK {}", new_nickname))?;
+        self.nickname = new_nickname.to_string();
+        Ok(())
+    }
+
     pub fn send_message(&mut self, message: impl AsRef<str>) -> io::Result<()> {
         let message = message.as_ref().trim();
         if message.is_empty() {

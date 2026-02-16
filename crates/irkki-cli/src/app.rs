@@ -147,6 +147,26 @@ impl App {
             self.reset_cursor();
 
             return;
+        } else if message.starts_with("/nick") {
+            if let Some(client) = &mut self.irc_client {
+                let new_nick = message.trim_start_matches("/nick").trim();
+
+                if let Err(error) = client.change_nickname(&new_nick) {
+                    error!("Failed to change nickname to {}: {}", new_nick, error);
+                    self.messages
+                        .push(format!("Failed to change nickname: {error}"));
+                } else {
+                    self.nickname = new_nick.to_string();
+                }
+            } else {
+                error!("Cannot change nickname: Not connected to an IRC server.");
+                self.messages
+                    .push("Not connected to an IRC server.".to_string());
+            }
+            self.input.clear();
+            self.reset_cursor();
+
+            return;
         } else if message == "/quit" {
             if let Some(client) = &mut self.irc_client {
                 client.quit().ok();
