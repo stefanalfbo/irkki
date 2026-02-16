@@ -73,6 +73,9 @@ impl IRCClient {
         Ok(())
     }
 
+    /// The QUIT command is used to terminate a client’s connection to the server. The server
+    /// acknowledges this by replying with an ERROR message and closing the connection to the
+    /// client.
     fn quit(&mut self) -> io::Result<()> {
         if self.writer.is_none() {
             return Ok(());
@@ -84,6 +87,17 @@ impl IRCClient {
         Ok(())
     }
 
+    /// This command is used to query information about a particular user. The server SHOULD
+    /// answer this command with numeric messages with information about the nick.
+    ///
+    /// The server SHOULD end its response (to a syntactically well-formed client message) with
+    /// RPL_ENDOFWHOIS, even if it did not send any other numeric message. This allows clients to
+    /// stop waiting for new numerics. In exceptional error conditions, servers MAY not reply to a
+    /// WHOIS command. Clients SHOULD implement a hard timeout to avoid waiting for a reply which
+    /// won’t come.
+    ///
+    /// Clients MUST NOT assume all numeric messages are sent at once, as servers can interleave
+    /// other messages before the end of the WHOIS response.
     fn whois(&mut self, nickname: impl AsRef<str>) -> io::Result<()> {
         let nickname = nickname.as_ref().trim();
         if nickname.is_empty() {
