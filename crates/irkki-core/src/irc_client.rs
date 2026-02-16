@@ -93,6 +93,18 @@ impl IRCClient {
         self.send_line(&format!("WHOIS {}", nickname))
     }
 
+    /// The NICK command is used to give the client a nickname or change the previous one.
+    ///
+    /// If the server receives a NICK command from a client where the desired nickname is
+    /// already in use on the network, it should issue an ERR_NICKNAMEINUSE numeric and ignore
+    /// the NICK command.
+    ///
+    /// If the server does not accept the new nickname supplied by the client as valid
+    /// (for instance, due to containing invalid characters), it should issue an ERR_ERRONEUSNICKNAME
+    /// numeric and ignore the NICK command. Servers MUST allow at least all alphanumerical
+    /// characters, square and curly brackets ([]{}), backslashes (\), and pipe (|) characters in
+    /// nicknames, and MAY disallow digits as the first character. Servers MAY allow extra
+    /// characters, as long as they do not introduce ambiguity in other commands.
     fn change_nickname(&mut self, new_nickname: impl AsRef<str>) -> io::Result<()> {
         let new_nickname = new_nickname.as_ref().trim();
         if new_nickname.is_empty() {
@@ -211,6 +223,40 @@ impl IRCClient {
                         "376" => {
                             debug!("End of MOTD.");
                             message_handler(IRCEvent::MessageOfTheDay(message_of_the_day.clone()))?;
+                        }
+                        // ERR_ERRONEUSNICKNAME
+                        "432" => {
+                            let nickname = message.params.get(1).cloned().unwrap_or_default();
+                            error!("Nickname '{}' is invalid.", nickname);
+                            message_handler(IRCEvent::Raw(format!(
+                                "The nickname '{}' is invalid!",
+                                nickname
+                            )))?;
+                        }
+                        // ERR_NONICKNAMEGIVEN
+                        "431" => {
+                            error!("No nickname given.");
+                            message_handler(IRCEvent::Raw(
+                                "No nickname given! Please provide a nickname.".to_string(),
+                            ))?;
+                        }
+                        // ERR_NICKNAMEINUSE
+                        "433" => {
+                            let nickname = message.params.get(1).cloned().unwrap_or_default();
+                            error!("Nickname '{}' is already in use.", nickname);
+                            message_handler(IRCEvent::Raw(format!(
+                                "The nickname '{}' is already in use!",
+                                nickname
+                            )))?;
+                        }
+                        // ERR_NICKCOLLISION
+                        "436" => {
+                            let nickname = message.params.get(1).cloned().unwrap_or_default();
+                            error!("Nickname '{}' is already in use (collision).", nickname);
+                            message_handler(IRCEvent::Raw(format!(
+                                "The nickname '{}' is already in use (collision)!",
+                                nickname
+                            )))?;
                         }
                         _ => {
                             message_handler(IRCEvent::Message(message))?;
