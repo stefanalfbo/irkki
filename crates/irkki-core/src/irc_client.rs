@@ -73,7 +73,7 @@ impl IRCClient {
         Ok(())
     }
 
-    pub fn quit(&mut self) -> io::Result<()> {
+    fn quit(&mut self) -> io::Result<()> {
         if self.writer.is_none() {
             return Ok(());
         }
@@ -84,7 +84,7 @@ impl IRCClient {
         Ok(())
     }
 
-    pub fn whois(&mut self, nickname: impl AsRef<str>) -> io::Result<()> {
+    fn whois(&mut self, nickname: impl AsRef<str>) -> io::Result<()> {
         let nickname = nickname.as_ref().trim();
         if nickname.is_empty() {
             return Ok(());
@@ -93,7 +93,7 @@ impl IRCClient {
         self.send_line(&format!("WHOIS {}", nickname))
     }
 
-    pub fn change_nickname(&mut self, new_nickname: impl AsRef<str>) -> io::Result<()> {
+    fn change_nickname(&mut self, new_nickname: impl AsRef<str>) -> io::Result<()> {
         let new_nickname = new_nickname.as_ref().trim();
         if new_nickname.is_empty() {
             return Ok(());
@@ -110,7 +110,19 @@ impl IRCClient {
             return Ok(());
         }
 
-        self.send_line(&format!("PRIVMSG {} :{}", self.channel, message))
+        if message.starts_with("/whois") {
+            let nickname = message.trim_start_matches("/whois").trim();
+
+            self.whois(&nickname)
+        } else if message.starts_with("/nick") {
+            let new_nick = message.trim_start_matches("/nick").trim();
+
+            self.change_nickname(&new_nick)
+        } else if message == "/quit" {
+            self.quit()
+        } else {
+            self.send_line(&format!("PRIVMSG {} :{}", self.channel, message))
+        }
     }
 
     pub fn start_listening<F>(&mut self, mut message_handler: F) -> io::Result<JoinHandle<()>>
