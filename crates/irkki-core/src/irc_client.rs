@@ -130,13 +130,34 @@ impl IRCClient {
         Ok(())
     }
 
+    fn send_private_message(
+        &mut self,
+        target: impl AsRef<str>,
+        message: impl AsRef<str>,
+    ) -> io::Result<()> {
+        let target = target.as_ref().trim();
+        let message = message.as_ref().trim();
+        if target.is_empty() || message.is_empty() {
+            return Ok(());
+        }
+
+        self.send_line(&format!("PRIVMSG {} :{}", target, message))
+    }
+
     pub fn send_message(&mut self, message: impl AsRef<str>) -> io::Result<()> {
         let message = message.as_ref().trim();
         if message.is_empty() {
             return Ok(());
         }
 
-        if message.starts_with("/whois") {
+        if message.starts_with("/msg") {
+            let command = message.trim_start_matches("/msg").trim_start();
+            let mut parts = command.splitn(2, char::is_whitespace);
+            let target = parts.next().unwrap_or_default();
+            let msg = parts.next().unwrap_or_default();
+
+            self.send_private_message(target, msg)
+        } else if message.starts_with("/whois") {
             let nickname = message.trim_start_matches("/whois").trim();
 
             self.whois(&nickname)
@@ -342,5 +363,23 @@ mod tests {
         let event = IRCEvent::Raw("Connected".to_string());
 
         assert_eq!(format!("{event:?}"), "IRCEvent::Raw(Connected)");
+    }
+
+    #[test]
+    fn msg_command_without_enough_arguments_is_noop() {
+        let mut client = IRCClient::new("nick", "localhost", 6667);
+
+        assert!(client.send_message("/msg").is_ok());
+        assert!(client.send_message("/msg alice").is_ok());
+    }
+
+    #[test]
+    fn msg_command_with_target_and_message_sends_private_message() {
+        let mut client = IRCClient::new("nick", "localhost", 6667);
+
+        let error = client
+            .send_message("/msg alice hello there")
+            .expect_err("expected NotConnected error");
+        assert_eq!(error.kind(), io::ErrorKind::NotConnected);
     }
 }
