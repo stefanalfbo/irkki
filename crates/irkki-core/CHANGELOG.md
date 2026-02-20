@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/stefanalfbo/irkki/compare/v0.1.1...v0.2.0) - 2026-02-20
+
+### Other
+
+- Implement /msg command for sending private messages in IRCClient
+- Add documentation for QUIT and WHOIS commands in IRCClient
+- Implement error handling when trying to change nickname
+- Refactor command handling in IRCClient and streamline message sending logic
+- Implement nickname change functionality in IRCClient and update input handling in App
+- Enhance logging for WHOIS and MOTD responses in IRCClient
+- Refactor IRCClient connection methods and enhance logging for better debugging
+- Add error logging for unconnected client in start_listening methods
+
 ## [0.1.1](https://github.com/stefanalfbo/irkki/compare/v0.1.0...v0.1.1) - 2026-02-15
 
 ### Other
