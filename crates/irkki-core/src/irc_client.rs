@@ -121,8 +121,9 @@ impl IRCClient {
     /// characters, as long as they do not introduce ambiguity in other commands.
     fn change_nickname(&mut self, new_nickname: impl AsRef<str>) -> io::Result<()> {
         let new_nickname = new_nickname.as_ref().trim();
-        if new_nickname.is_empty() {
-            return Ok(());
+        if let Err(msg) = is_valid_nickname(new_nickname) {
+            error!("Nickname error: {msg}");
+            return Ok(()); // swallow the error here
         }
 
         self.send_line(&format!("NICK {}", new_nickname))?;
@@ -329,6 +330,27 @@ impl IRCClient {
     }
 }
 
+fn is_valid_nickname(nickname: &str) -> Result<(), &str> {
+    if nickname.is_empty() {
+        Err("MUST NOT be empty")
+    } else if nickname.starts_with("$") || nickname.starts_with(":") {
+        Err("MUST NOT start with $ or :")
+    } else if nickname.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        Err("MUST NOT contain whitespace or control characters")
+    } else if nickname.contains(" ")
+        || nickname.contains(",")
+        || nickname.contains("*")
+        || nickname.contains("?")
+        || nickname.contains("!")
+        || nickname.contains("@")
+        || nickname.contains(".")
+    {
+        Err("MUST NOT contain any illegal characters")
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,5 +403,55 @@ mod tests {
             .send_message("/msg alice hello there")
             .expect_err("expected NotConnected error");
         assert_eq!(error.kind(), io::ErrorKind::NotConnected);
+    }
+
+    #[test]
+    fn validate_nickname() {
+        let invalid_nicknames = vec![
+            "",
+            "$mr_dollar",
+            ":mr_colon",
+            "mr c00l",
+            "mr\tc00l",
+            "mr\r\nc00l",
+            "mr,c00l",
+            "mr*c00l",
+            "mr_cool?",
+            "mr_c00l!",
+            "mr@cool",
+            "mr_cool.com",
+        ];
+
+        for nickname in invalid_nicknames.iter() {
+            let is_invalid = match is_valid_nickname(&nickname) {
+                Err(_) => true,
+                _ => false,
+            };
+
+            assert!(is_invalid)
+        }
+    }
+
+    #[test]
+    fn validate_valid_nicknames() {
+        let valid_nicknames = vec![
+            "mr_c00l",
+            "Alice123",
+            "[]{}\\|",
+            "n",
+            "m-r_c00l",
+        ];
+
+        for nickname in valid_nicknames.iter() {
+            assert!(is_valid_nickname(nickname).is_ok());
+        }
+    }
+
+    #[test]
+    fn nick_command_with_control_characters_is_noop() {
+        let mut client = IRCClient::new("nick", "localhost", 6667);
+
+        assert!(client.send_message("/nick bad\tname").is_ok());
+        assert!(client.send_message("/nick bad\r\nname").is_ok());
     }
 }
